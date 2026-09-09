@@ -1,18 +1,28 @@
 #!/usr/bin/env bash
-# Deploys apps/web to Firebase App Hosting (see apps/web/apphosting.yaml for
-# the runtime env/secrets config). One-time setup before this can succeed:
-#   firebase apphosting:backends:create   (creates the "daily-lesson" backend)
-#   firebase apphosting:secrets:set openai-api-key
+# Local safety gate before shipping. The "daily-lesson" App Hosting backend
+# is GitHub-connected with automatic rollouts enabled (ABIU), so Firebase
+# builds and deploys on its own whenever main is pushed — this script does
+# NOT call `firebase deploy`. It just runs tests/lint/build locally so
+# nothing broken gets pushed, then pushes.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_ID="random-knowledge-ea232"
 BACKEND_ID="${APPHOSTING_BACKEND:-daily-lesson}"
+BRANCH="main"
 
 cd "$REPO_ROOT"
 
-echo "==> Switching to Firebase project '$PROJECT_ID'"
-firebase use "$PROJECT_ID"
+current_branch="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$current_branch" != "$BRANCH" ]; then
+  echo "Refusing to deploy from branch '$current_branch' — App Hosting tracks '$BRANCH'." >&2
+  exit 1
+fi
+
+if [ -n "$(git status --porcelain)" ]; then
+  echo "Working tree has uncommitted changes — commit or stash before deploying." >&2
+  exit 1
+fi
 
 echo "==> Running tests"
 npm --prefix apps/web run test
@@ -23,7 +33,8 @@ npm --prefix apps/web run lint
 echo "==> Building"
 npm --prefix apps/web run build
 
-echo "==> Deploying to App Hosting backend '$BACKEND_ID'"
-firebase deploy --only "apphosting:$BACKEND_ID"
+echo "==> Pushing '$BRANCH' (triggers an App Hosting rollout automatically)"
+git push origin "$BRANCH"
 
-echo "==> Deploy complete"
+echo "==> Pushed. Firebase App Hosting will build and deploy '$BACKEND_ID' automatically."
+echo "    Track progress: firebase apphosting:rollouts:list $BACKEND_ID --project $PROJECT_ID"
