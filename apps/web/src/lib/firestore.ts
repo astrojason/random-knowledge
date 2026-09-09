@@ -1,0 +1,75 @@
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { defaultWeights, type Weights } from "@/lib/categories";
+import type { DailyProgress, HistoryEntry, Lesson, StreakData } from "@/lib/types";
+
+const DEFAULT_STREAK: StreakData = { streak: 0, longest: 0, lastDate: null };
+
+export async function getStreak(uid: string): Promise<StreakData> {
+  const snap = await getDoc(doc(db, "users", uid, "meta", "streak"));
+  return snap.exists() ? (snap.data() as StreakData) : DEFAULT_STREAK;
+}
+
+export async function setStreak(uid: string, data: StreakData): Promise<void> {
+  await setDoc(doc(db, "users", uid, "meta", "streak"), data);
+}
+
+export async function getWeights(uid: string): Promise<Weights> {
+  const snap = await getDoc(doc(db, "users", uid, "meta", "weights"));
+  return snap.exists() ? (snap.data() as Weights) : defaultWeights();
+}
+
+export async function setWeights(uid: string, weights: Weights): Promise<void> {
+  await setDoc(doc(db, "users", uid, "meta", "weights"), weights);
+}
+
+export async function getHistory(uid: string): Promise<HistoryEntry[]> {
+  const snap = await getDoc(doc(db, "users", uid, "meta", "history"));
+  return snap.exists() ? (snap.data().entries as HistoryEntry[]) : [];
+}
+
+export async function appendHistory(
+  uid: string,
+  entry: HistoryEntry,
+  existing: HistoryEntry[]
+): Promise<HistoryEntry[]> {
+  const next = [...existing, entry].slice(-60);
+  await setDoc(doc(db, "users", uid, "meta", "history"), { entries: next });
+  return next;
+}
+
+export async function getLesson(uid: string, date: string): Promise<Lesson | null> {
+  const snap = await getDoc(doc(db, "users", uid, "lessons", date));
+  return snap.exists() ? (snap.data() as Lesson) : null;
+}
+
+export async function setLesson(uid: string, date: string, lesson: Lesson): Promise<void> {
+  await setDoc(doc(db, "users", uid, "lessons", date), lesson);
+}
+
+export async function getProgress(uid: string, date: string): Promise<DailyProgress | null> {
+  const snap = await getDoc(doc(db, "users", uid, "progress", date));
+  return snap.exists() ? (snap.data() as DailyProgress) : null;
+}
+
+export async function setProgress(
+  uid: string,
+  date: string,
+  progress: DailyProgress
+): Promise<void> {
+  await setDoc(doc(db, "users", uid, "progress", date), progress);
+}
+
+/** Deletes every document under users/{uid} — streak, weights, history, lessons, progress. */
+export async function resetAllUserData(uid: string): Promise<void> {
+  const metaDocs = ["streak", "weights", "history"].map((id) => doc(db, "users", uid, "meta", id));
+  const [lessonDocs, progressDocs] = await Promise.all([
+    getDocs(collection(db, "users", uid, "lessons")),
+    getDocs(collection(db, "users", uid, "progress")),
+  ]);
+  await Promise.all([
+    ...metaDocs.map((d) => deleteDoc(d)),
+    ...lessonDocs.docs.map((d) => deleteDoc(d.ref)),
+    ...progressDocs.docs.map((d) => deleteDoc(d.ref)),
+  ]);
+}

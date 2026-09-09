@@ -1,0 +1,564 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600&display=swap');
+
+  #dl-root {
+    --ink: #1c2b39;
+    --paper: #f2ecdd;
+    --paper-edge: #e3dac2;
+    --rust: #b8622e;
+    --teal: #2f6e68;
+    --text: #2a2a28;
+    --text-dim: #6b6357;
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+    background: transparent;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0;
+  }
+  #dl-root * { box-sizing: border-box; }
+
+  .dl-page {
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
+    border-radius: 4px;
+    padding: 32px 36px 28px;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(28,43,57,0.06);
+  }
+
+  .dl-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--paper-edge);
+  }
+  .dl-date {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .dl-streak {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--rust);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .dl-tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--teal);
+    background: rgba(47,110,104,0.09);
+    padding: 3px 10px;
+    border-radius: 3px;
+    margin-bottom: 14px;
+  }
+
+  .dl-title {
+    font-family: 'Lora', serif;
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 1.25;
+    color: var(--ink);
+    margin: 0 0 16px;
+    max-width: 34ch;
+  }
+
+  .dl-body p {
+    font-family: 'Lora', serif;
+    font-size: 16.5px;
+    line-height: 1.65;
+    color: var(--text);
+    margin: 0 0 14px;
+    max-width: 62ch;
+  }
+
+  .dl-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+    font-size: 14px;
+    gap: 12px;
+  }
+  .dl-spinner {
+    width: 22px; height: 22px;
+    border: 2px solid var(--paper-edge);
+    border-top-color: var(--rust);
+    border-radius: 50%;
+    animation: dl-spin 0.8s linear infinite;
+  }
+  @keyframes dl-spin { to { transform: rotate(360deg); } }
+
+  .dl-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  .dl-btn:hover { opacity: 0.85; }
+  .dl-btn-primary { background: var(--ink); color: var(--paper); }
+  .dl-btn-ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--paper-edge);
+  }
+
+  .dl-actions { margin-top: 20px; display: flex; gap: 10px; }
+
+  .dl-links {
+    display: flex;
+    gap: 14px;
+    margin: 4px 0 18px;
+    flex-wrap: wrap;
+  }
+  .dl-link {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--teal);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(47,110,104,0.35);
+    padding-bottom: 1px;
+  }
+  .dl-link:hover { border-bottom-color: var(--teal); }
+  .dl-link.dl-link-rust { color: var(--rust); border-bottom-color: rgba(184,98,46,0.35); }
+
+  .dl-quiz-q {
+    font-family: 'Lora', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 0 0 14px;
+  }
+  .dl-quiz-progress {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .dl-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: #fff;
+    border: 1px solid var(--paper-edge);
+    border-radius: 3px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14.5px;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .dl-option:hover:not(:disabled) { border-color: var(--rust); }
+  .dl-option:disabled { cursor: default; }
+  .dl-option.correct { background: rgba(47,110,104,0.12); border-color: var(--teal); }
+  .dl-option.incorrect { background: rgba(184,98,46,0.1); border-color: var(--rust); }
+
+  .dl-explain {
+    font-size: 13.5px;
+    color: var(--text-dim);
+    margin: 10px 0 0;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .dl-done {
+    text-align: center;
+    padding: 30px 10px 10px;
+  }
+  .dl-done-score {
+    font-family: 'Lora', serif;
+    font-size: 22px;
+    color: var(--ink);
+    margin: 0 0 6px;
+  }
+  .dl-done-sub {
+    font-size: 13.5px;
+    color: var(--text-dim);
+    margin: 0 0 20px;
+  }
+  .dl-feedback-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 4px;
+  }
+
+  .dl-footer {
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid var(--paper-edge);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .dl-reset {
+    font-size: 12px;
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .dl-err {
+    font-size: 13px;
+    color: var(--rust);
+    margin-top: 10px;
+  }
+</style>
+
+<div id="dl-root">
+  <div class="dl-page" id="dl-page">
+    <div class="dl-loading">
+      <div class="dl-spinner"></div>
+      <div id="dl-loading-text">Setting things up</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const CATEGORIES = {
+    psychology: 'Mind & Behavior',
+    engineering: 'Engineering',
+    howthings: 'How Things Work',
+    arthistory: 'Art History',
+    advanced: 'Big Ideas, Simply Explained',
+    general: 'Everything Else'
+  };
+  const CAT_KEYS = Object.keys(CATEGORIES);
+  const todayStr = () => new Date().toISOString().slice(0, 10);
+  const $page = document.getElementById('dl-page');
+  const setLoadingText = (t) => {
+    const el = document.getElementById('dl-loading-text');
+    if (el) el.textContent = t;
+  };
+
+  function loadingView(text) {
+    $page.innerHTML = `
+      <div class="dl-loading">
+        <div class="dl-spinner"></div>
+        <div>${text}</div>
+      </div>`;
+  }
+
+  let lastStorageError = null;
+
+  async function safeGet(key) {
+    try {
+      const r = await window.storage.get(key, false);
+      return r ? r.value : null;
+    } catch (e) {
+      lastStorageError = `get(${key}) failed: ${e && e.message ? e.message : e}`;
+      console.error(lastStorageError);
+      return null;
+    }
+  }
+  async function safeSet(key, value) {
+    try {
+      const r = await window.storage.set(key, value, false);
+      if (!r) {
+        lastStorageError = `set(${key}) returned falsy — write likely did not persist`;
+        console.error(lastStorageError);
+      }
+      return r;
+    } catch (e) {
+      lastStorageError = `set(${key}) failed: ${e && e.message ? e.message : e}`;
+      console.error(lastStorageError);
+      return null;
+    }
+  }
+
+  function pickCategory(weights, avoidRecent) {
+    const pool = CAT_KEYS.filter(k => !avoidRecent.includes(k));
+    const usable = pool.length ? pool : CAT_KEYS;
+    let total = 0;
+    usable.forEach(k => { total += Math.max(weights[k] || 1, 1); });
+    let r = Math.random() * total;
+    for (const k of usable) {
+      r -= Math.max(weights[k] || 1, 1);
+      if (r <= 0) return k;
+    }
+    return usable[0];
+  }
+
+  async function generateLesson(category, recentTitles) {
+    const categoryNote = category === 'advanced'
+      ? ' This category is for genuinely advanced, technical ideas (physics, math, cosmology, computer science theory, etc.) — do not water down the actual concept, but explain it ELI5-style with a clear, concrete analogy so a smart non-specialist can follow it.'
+      : '';
+
+    const prompt = `Generate one short daily "curiosity lesson" for a general adult learner. Category: ${CATEGORIES[category]}.${categoryNote}
+
+Avoid repeating any of these recent topics: ${recentTitles.length ? recentTitles.join('; ') : '(none yet)'}.
+
+Requirements:
+- Pick a specific, narrow, genuinely interesting subtopic within the category (not a broad overview).
+- Write 3 short paragraphs (roughly 220-320 words total), engaging and clear, aimed at a curious adult. No headers within the body.
+- Then write exactly 3 multiple-choice quiz questions testing comprehension of THIS specific lesson (not general trivia). Each question has exactly 4 options, one correct.
+- Keep explanations for answers short (1 sentence).
+- Also provide two short search phrases (3-6 words each) for someone who wants to go deeper: one to paste into Wikipedia search, one to paste into YouTube search. These must be plain search phrases, not URLs or claims about what a specific video/article contains.
+
+Respond with ONLY raw JSON, no markdown fences, no preamble, in exactly this shape:
+{
+  "title": "string, under 60 chars",
+  "body": ["paragraph1", "paragraph2", "paragraph3"],
+  "wikiQuery": "string, short search phrase",
+  "youtubeQuery": "string, short search phrase",
+  "quiz": [
+    {"question": "string", "options": ["a","b","c","d"], "correctIndex": 0, "explanation": "string"},
+    {"question": "string", "options": ["a","b","c","d"], "correctIndex": 0, "explanation": "string"},
+    {"question": "string", "options": ["a","b","c","d"], "correctIndex": 0, "explanation": "string"}
+  ]
+}`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await response.json();
+    const textBlock = (data.content || []).find(b => b.type === 'text');
+    if (!textBlock) throw new Error('No text in response');
+    const cleaned = textBlock.text.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleaned);
+  }
+
+  async function init() {
+    loadingText: setLoadingText('Setting things up');
+    const date = todayStr();
+    const lessonKey = `lesson:${date}`;
+
+    let lesson = await safeGet(lessonKey);
+    let streakData = (await safeGet('streak-data')) || { streak: 0, longest: 0, lastDate: null };
+    let weights = (await safeGet('weights')) || Object.fromEntries(CAT_KEYS.map(k => [k, 10]));
+    let history = (await safeGet('history')) || [];
+    let progress = (await safeGet(`progress:${date}`)) || { qIndex: 0, correct: 0, answered: false, done: false };
+
+    if (!lesson) {
+      setLoadingText('Picking today\u2019s topic');
+      const recentCats = history.slice(-2).map(h => h.category);
+      const category = pickCategory(weights, recentCats);
+      const recentTitles = history.slice(-12).map(h => h.title);
+      setLoadingText('Writing today\u2019s lesson');
+      try {
+        const generated = await generateLesson(category, recentTitles);
+        lesson = { category, ...generated };
+        await safeSet(lessonKey, lesson);
+        history.push({ date, category, title: lesson.title });
+        if (history.length > 60) history = history.slice(-60);
+        await safeSet('history', history);
+      } catch (e) {
+        renderError(e);
+        return;
+      }
+    }
+
+    renderLesson(lesson, streakData, weights, progress, date, lessonKey);
+  }
+
+  function renderError(e) {
+    $page.innerHTML = `
+      <div class="dl-loading">
+        <div>Couldn't generate today's lesson.</div>
+        <div class="dl-err">${(e && e.message) ? e.message : 'Unknown error'}</div>
+        <button class="dl-btn dl-btn-primary" id="dl-retry" style="margin-top:14px;">Try again</button>
+      </div>`;
+    document.getElementById('dl-retry').onclick = init;
+  }
+
+  function storageWarningHtml() {
+    if (!lastStorageError) return '';
+    return `<div class="dl-err" style="margin-bottom:14px;">Storage issue: ${lastStorageError} — your streak/history may not be saving.</div>`;
+  }
+
+  function headerHtml(streakData, category, date) {
+    const d = new Date(date + 'T00:00:00');
+    const dateLabel = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    return `
+      <div class="dl-topbar">
+        <span class="dl-date">${dateLabel}</span>
+        <span class="dl-streak">${streakData.streak > 0 ? `${streakData.streak} day streak` : 'Start your streak'}</span>
+      </div>
+      ${storageWarningHtml()}
+      <span class="dl-tag">${CATEGORIES[category]}</span>`;
+  }
+
+  function linksHtml(lesson) {
+    if (!lesson.wikiQuery && !lesson.youtubeQuery) return '';
+    const wiki = lesson.wikiQuery
+      ? `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(lesson.wikiQuery)}`
+      : null;
+    const yt = lesson.youtubeQuery
+      ? `https://www.youtube.com/results?search_query=${encodeURIComponent(lesson.youtubeQuery)}`
+      : null;
+    return `
+      <div class="dl-links">
+        ${wiki ? `<a class="dl-link" href="${wiki}" target="_blank" rel="noopener">Go deeper on Wikipedia</a>` : ''}
+        ${yt ? `<a class="dl-link dl-link-rust" href="${yt}" target="_blank" rel="noopener">Find a YouTube explainer</a>` : ''}
+      </div>`;
+  }
+
+  function renderLesson(lesson, streakData, weights, progress, date, lessonKey) {
+    if (progress.done) {
+      renderDone(lesson, streakData, weights, progress, date);
+      return;
+    }
+    if (progress.qIndex > 0 || progress.answered !== undefined && progress.inQuiz) {
+      // handled by renderQuiz directly when needed
+    }
+    $page.innerHTML = `
+      ${headerHtml(streakData, lesson.category, date)}
+      <h2 class="dl-title">${lesson.title}</h2>
+      <div class="dl-body">
+        ${lesson.body.map(p => `<p>${p}</p>`).join('')}
+      </div>
+      ${linksHtml(lesson)}
+      <div class="dl-actions">
+        <button class="dl-btn dl-btn-primary" id="dl-start-quiz">Take the quick check</button>
+      </div>
+      <div class="dl-footer">
+        <button class="dl-reset" id="dl-reset">Reset my data</button>
+        <span></span>
+      </div>
+    `;
+    document.getElementById('dl-start-quiz').onclick = () => renderQuiz(lesson, streakData, weights, { qIndex: 0, correct: 0 }, date);
+    document.getElementById('dl-reset').onclick = handleReset;
+  }
+
+  function renderQuiz(lesson, streakData, weights, state, date) {
+    const q = lesson.quiz[state.qIndex];
+    $page.innerHTML = `
+      ${headerHtml(streakData, lesson.category, date)}
+      <div class="dl-quiz-progress">Question ${state.qIndex + 1} of ${lesson.quiz.length}</div>
+      <p class="dl-quiz-q">${q.question}</p>
+      <div id="dl-options">
+        ${q.options.map((opt, i) => `<button class="dl-option" data-i="${i}">${opt}</button>`).join('')}
+      </div>
+      <p class="dl-explain" id="dl-explain" style="display:none;"></p>
+      <div class="dl-actions" id="dl-next-wrap" style="display:none;">
+        <button class="dl-btn dl-btn-primary" id="dl-next">Continue</button>
+      </div>
+    `;
+    const optionEls = Array.from(document.querySelectorAll('.dl-option'));
+    optionEls.forEach(btn => {
+      btn.onclick = () => {
+        const i = parseInt(btn.getAttribute('data-i'), 10);
+        optionEls.forEach(b => b.disabled = true);
+        if (i === q.correctIndex) {
+          btn.classList.add('correct');
+          state.correct += 1;
+        } else {
+          btn.classList.add('incorrect');
+          optionEls[q.correctIndex].classList.add('correct');
+        }
+        const explainEl = document.getElementById('dl-explain');
+        explainEl.textContent = q.explanation;
+        explainEl.style.display = 'block';
+        document.getElementById('dl-next-wrap').style.display = 'flex';
+        document.getElementById('dl-next').onclick = () => {
+          const nextIndex = state.qIndex + 1;
+          if (nextIndex < lesson.quiz.length) {
+            renderQuiz(lesson, streakData, weights, { qIndex: nextIndex, correct: state.correct }, date);
+          } else {
+            finishQuiz(lesson, streakData, weights, state.correct, date);
+          }
+        };
+      };
+    });
+  }
+
+  async function finishQuiz(lesson, streakData, weights, correct, date) {
+    const prevDate = streakData.lastDate;
+    let newStreak = streakData.streak;
+    if (prevDate !== date) {
+      const oneDayAgo = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+      // "Don't miss twice": a single missed day doesn't break the streak,
+      // only two consecutive missed days does.
+      newStreak = (prevDate === oneDayAgo || prevDate === twoDaysAgo) ? streakData.streak + 1 : 1;
+    }
+    const newStreakData = {
+      streak: newStreak,
+      longest: Math.max(newStreak, streakData.longest || 0),
+      lastDate: date
+    };
+    await safeSet('streak-data', newStreakData);
+    await safeSet(`progress:${date}`, { done: true, correct, total: lesson.quiz.length });
+    renderDone(lesson, newStreakData, weights, { correct, total: lesson.quiz.length }, date);
+  }
+
+  function renderDone(lesson, streakData, weights, progress, date) {
+    $page.innerHTML = `
+      ${headerHtml(streakData, lesson.category, date)}
+      <div class="dl-done">
+        <p class="dl-done-score">${progress.correct} of ${progress.total || lesson.quiz.length} today</p>
+        <p class="dl-done-sub">Today's topic: ${CATEGORIES[lesson.category]}. Come back tomorrow for the next one.</p>
+        ${linksHtml(lesson)}
+        <p class="dl-done-sub" style="margin-bottom:12px;">Want more like this, or less?</p>
+        <div class="dl-feedback-row">
+          <button class="dl-btn dl-btn-ghost" id="dl-less">Less ${CATEGORIES[lesson.category]}</button>
+          <button class="dl-btn dl-btn-primary" id="dl-more">More ${CATEGORIES[lesson.category]}</button>
+        </div>
+      </div>
+      <div class="dl-footer">
+        <button class="dl-reset" id="dl-reset">Reset my data</button>
+        <span></span>
+      </div>
+    `;
+    document.getElementById('dl-reset').onclick = handleReset;
+    document.getElementById('dl-more').onclick = async () => {
+      weights[lesson.category] = Math.min((weights[lesson.category] || 10) + 4, 40);
+      await safeSet('weights', weights);
+      flashSaved('dl-more');
+    };
+    document.getElementById('dl-less').onclick = async () => {
+      weights[lesson.category] = Math.max((weights[lesson.category] || 10) - 4, 2);
+      await safeSet('weights', weights);
+      flashSaved('dl-less');
+    };
+  }
+
+  function flashSaved(id) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const original = btn.textContent;
+    btn.textContent = 'Got it';
+    btn.disabled = true;
+    setTimeout(() => { btn.textContent = original; btn.disabled = true; }, 1200);
+  }
+
+  async function handleReset() {
+    if (!confirm('Reset your streak, history, and topic preferences? This cannot be undone.')) return;
+    try {
+      const keys = await window.storage.list('', false);
+      const list = keys && keys.keys ? keys.keys : [];
+      for (const k of list) {
+        await window.storage.delete(k, false);
+      }
+    } catch (e) {
+      console.error('reset failed', e);
+    }
+    init();
+  }
+
+  init();
+})();
+</script>
