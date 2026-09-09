@@ -1,4 +1,4 @@
-# Firebase Setup Plan — Daily Lesson App
+# Firebase Setup Plan — Random Knowledge App
 
 ## App Overview
 
@@ -44,10 +44,10 @@ firebase login --no-localhost
 ## 2. Create the Firebase project
 
 ```
-firebase projects:create daily-lesson-app --display-name "Daily Lesson App"
+firebase projects:create random-knowledge --display-name "Random Knowledge"
 ```
 
-- Project ID must be globally unique — if `daily-lesson-app` is taken, append a suffix (e.g. `daily-lesson-app-jason`).
+- Project ID must be globally unique — if `random-knowledge` is taken, Firebase appends a random suffix (this project's actual ID ended up `random-knowledge-ea232`).
 - Note the returned project ID; it's needed in every step after this.
 
 Verify:
@@ -66,7 +66,7 @@ Select the project just created, give it an alias like `default`.
 ## 4. Register a Web App in the project
 
 ```
-firebase apps:create WEB "Daily Lesson Web"
+firebase apps:create WEB "Random Knowledge Web"
 ```
 
 This returns an App ID. Get the full config object from it:

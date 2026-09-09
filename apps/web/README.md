@@ -1,4 +1,4 @@
-# Daily Lesson
+# Random Knowledge
 
 A single-user daily micro-learning app: one AI-generated lesson a day, a 3-question comprehension check, and a streak. See `../../setup-plan.md` for the Firebase provisioning plan and `../../TODO.md` for what's left to do before this runs end-to-end.
 

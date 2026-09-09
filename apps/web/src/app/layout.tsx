@@ -26,7 +26,7 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Daily Lesson",
+  title: "Random Knowledge",
   description: "One short lesson a day, with a quick comprehension check.",
 };
 

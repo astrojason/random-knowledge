@@ -1,6 +1,6 @@
 {
-  "name": "daily-lesson.astrojason.com",
-  "version": "0.1.0",
+  "name": "random-knowledge.astrojason.com",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "npm --prefix apps/web run dev",

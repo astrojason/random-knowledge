@@ -14,7 +14,7 @@ export function LegalLayout({
     <div className="min-h-screen px-4 py-12">
       <div className="mx-auto w-full max-w-2xl">
         <Link href="/" className="text-sm font-medium text-accent hover:opacity-85">
-          ← Daily Lesson
+          ← Random Knowledge
         </Link>
 
         <div className="mt-6 rounded-md border border-border bg-surface px-6 py-8 sm:px-10 sm:py-10">

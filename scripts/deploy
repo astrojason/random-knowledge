@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Local safety gate before shipping. The "daily-lesson" App Hosting backend
-# is GitHub-connected with automatic rollouts enabled (ABIU), so Firebase
-# builds and deploys on its own whenever main is pushed — this script does
-# NOT call `firebase deploy`. It just runs tests/lint/build locally so
-# nothing broken gets pushed, then pushes.
+# Local safety gate before shipping. The "random-knowledge" App Hosting
+# backend is GitHub-connected; once automatic rollouts (ABIU) are enabled on
+# it, Firebase builds and deploys on its own whenever main is pushed — this
+# script does NOT call `firebase deploy`. It just runs tests/lint/build
+# locally so nothing broken gets pushed, then pushes.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_ID="random-knowledge-ea232"
-BACKEND_ID="${APPHOSTING_BACKEND:-daily-lesson}"
+BACKEND_ID="${APPHOSTING_BACKEND:-random-knowledge}"
 BRANCH="main"
 
 cd "$REPO_ROOT"

@@ -1,7 +1,7 @@
 export const THEME_VALUES = ["paper", "dusk"] as const;
 export type Theme = (typeof THEME_VALUES)[number];
 
-export const STORAGE_KEY = "daily-lesson-theme";
+export const STORAGE_KEY = "random-knowledge-theme";
 
 export function getStoredTheme(): Theme | null {
   if (typeof window === "undefined") return null;

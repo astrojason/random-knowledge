@@ -19,7 +19,7 @@ const FEATURES = [
   },
   {
     title: "Your streak, tracked",
-    body: "Come back daily and Daily Lesson keeps count, so your learning habit builds visible momentum.",
+    body: "Come back daily and Random Knowledge keeps count, so your learning habit builds visible momentum.",
   },
 ];
 
@@ -30,7 +30,7 @@ export function LandingPage() {
     <div className="px-4 py-16 sm:py-20">
       <div className="mx-auto w-full max-w-2xl text-center">
         <h1 className="font-heading text-3xl font-bold text-fg-strong sm:text-4xl">
-          Daily Lesson
+          Random Knowledge
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base text-fg-muted sm:text-lg">
           One short, AI-generated lesson a day — plus a quick quiz to check what stuck — so a
@@ -49,7 +49,7 @@ export function LandingPage() {
 
       <div className="mx-auto mt-10 w-full max-w-sm rounded-md border border-border bg-surface px-8 py-10 text-center shadow-sm">
         <p className="mb-6 text-sm text-fg-muted">
-          Daily Lesson is currently invite-only. Sign in with Google to request access —
+          Random Knowledge is currently invite-only. Sign in with Google to request access —
           you&apos;ll be able to use the app as soon as it&apos;s approved.
         </p>
         <button
