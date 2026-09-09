@@ -35,4 +35,6 @@ export interface DailyProgress {
   done: boolean;
   correct: number;
   total: number;
+  /** Selected option index per question, in question order. Absent on progress saved before this field existed. */
+  answers?: number[];
 }

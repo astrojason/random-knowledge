@@ -18,17 +18,10 @@ import {
   setWeights,
 } from "@/lib/firestore";
 import { advanceStreak } from "@/lib/streak";
+import { advanceQuiz, initialQuizState, selectAnswer } from "@/lib/quiz";
 import type { DailyProgress, GeneratedLesson, Lesson, StreakData } from "@/lib/types";
 
 export type Phase = "loading" | "generating" | "error" | "lesson" | "quiz" | "done";
-
-interface QuizState {
-  qIndex: number;
-  correct: number;
-  selected: number | null;
-}
-
-const INITIAL_QUIZ: QuizState = { qIndex: 0, correct: 0, selected: null };
 
 export function useDailyLesson(user: User | null) {
   const [phase, setPhase] = useState<Phase>("loading");
@@ -37,7 +30,7 @@ export function useDailyLesson(user: User | null) {
   const [streak, setStreakState] = useState<StreakData>({ streak: 0, longest: 0, lastDate: null });
   const [weights, setWeightsState] = useState<Weights>(defaultWeights());
   const [progress, setProgressState] = useState<DailyProgress | null>(null);
-  const [quiz, setQuiz] = useState<QuizState>(INITIAL_QUIZ);
+  const [quiz, setQuiz] = useState(initialQuizState);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -83,7 +76,7 @@ export function useDailyLesson(user: User | null) {
 
       setLessonState(currentLesson);
       setProgressState(progressData);
-      setQuiz(INITIAL_QUIZ);
+      setQuiz(initialQuizState);
       setPhase(progressData?.done ? "done" : "lesson");
     } catch (err) {
       console.error("useDailyLesson load failed:", err);
@@ -101,28 +94,29 @@ export function useDailyLesson(user: User | null) {
   }, [load]);
 
   function startQuiz() {
-    setQuiz(INITIAL_QUIZ);
+    setQuiz(initialQuizState);
     setPhase("quiz");
   }
 
   function selectOption(index: number) {
     if (!lesson) return;
-    setQuiz((q) => {
-      if (q.selected !== null) return q;
-      const isCorrect = index === lesson.quiz[q.qIndex].correctIndex;
-      return { ...q, selected: index, correct: q.correct + (isCorrect ? 1 : 0) };
-    });
+    setQuiz((q) => selectAnswer(q, index, lesson.quiz[q.qIndex].correctIndex));
   }
 
   async function nextQuestion() {
     if (!user || !lesson) return;
-    const nextIndex = quiz.qIndex + 1;
-    if (nextIndex < lesson.quiz.length) {
-      setQuiz({ qIndex: nextIndex, correct: quiz.correct, selected: null });
+    const advanced = advanceQuiz(quiz, lesson.quiz.length);
+    if (advanced !== "complete") {
+      setQuiz(advanced);
       return;
     }
     const newStreak = advanceStreak(streak, date);
-    const finalProgress: DailyProgress = { done: true, correct: quiz.correct, total: lesson.quiz.length };
+    const finalProgress: DailyProgress = {
+      done: true,
+      correct: quiz.correct,
+      total: lesson.quiz.length,
+      answers: quiz.answers,
+    };
     try {
       await Promise.all([setStreak(user.uid, newStreak), setProgress(user.uid, date, finalProgress)]);
       setStreakState(newStreak);
