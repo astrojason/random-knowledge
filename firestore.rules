@@ -4,5 +4,24 @@ service cloud.firestore {
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    match /accessRequests/{uid} {
+      // Superadmin (the `superadmin` custom claim, set via
+      // scripts/grant-superadmin.mjs) can read and write any request.
+      allow read, write: if request.auth != null && request.auth.token.superadmin == true;
+
+      // Any signed-in user can check their own status...
+      allow get: if request.auth != null && request.auth.uid == uid;
+
+      // ...create their own request as "pending"...
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.status == "pending";
+
+      // ...and refresh it on repeat visits, but never change its own status.
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.uid == uid;
+    }
   }
 }

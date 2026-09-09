@@ -1,4 +1,5 @@
 import ThemeToggle from "@/components/ThemeToggle";
+import { AdminLink } from "@/components/AdminLink";
 import { CATEGORIES, type CategoryKey } from "@/lib/categories";
 import { formatDateLabel } from "@/lib/date";
 import type { StreakData } from "@/lib/types";
@@ -7,11 +8,13 @@ export function Header({
   date,
   streak,
   category,
+  showAdminLink,
   onSignOut,
 }: {
   date: string;
   streak: StreakData;
   category?: CategoryKey;
+  showAdminLink?: boolean;
   onSignOut: () => void;
 }) {
   return (
@@ -22,6 +25,7 @@ export function Header({
           <span className="text-[13px] font-semibold text-rust">
             {streak.streak > 0 ? `${streak.streak} day streak` : "Start your streak"}
           </span>
+          {showAdminLink && <AdminLink />}
           <ThemeToggle />
           <button
             type="button"

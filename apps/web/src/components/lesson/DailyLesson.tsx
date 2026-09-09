@@ -8,16 +8,23 @@ import { LessonView } from "@/components/lesson/LessonView";
 import { LoadingView } from "@/components/lesson/LoadingView";
 import { QuizView } from "@/components/lesson/QuizView";
 import { useAuth } from "@/lib/auth-context";
+import { isSuperadmin } from "@/lib/auth-guard";
 import { useDailyLesson } from "@/lib/useDailyLesson";
 
 export function DailyLesson() {
-  const { user, signOut } = useAuth();
+  const { user, claims, signOut } = useAuth();
   const { phase, date, lesson, streak, progress, quiz, errorMessage, actions } = useDailyLesson(user);
 
   return (
     <div className="mx-auto w-full max-w-[640px] px-4 py-10">
       <Card>
-        <Header date={date} streak={streak} category={lesson?.category} onSignOut={signOut} />
+        <Header
+          date={date}
+          streak={streak}
+          category={lesson?.category}
+          showAdminLink={isSuperadmin(claims)}
+          onSignOut={signOut}
+        />
 
         {phase === "loading" && <LoadingView text="Setting things up" />}
         {phase === "generating" && <LoadingView text="Writing today’s lesson" />}

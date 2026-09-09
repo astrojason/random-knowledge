@@ -82,8 +82,8 @@ Firebase CLI cannot toggle sign-in providers. This has to be done manually:
 
 1. Go to https://console.firebase.google.com → select the project.
 2. Authentication → Get Started.
-3. Enable **Email/Password** (simplest for a single-user app) or **Google** sign-in — whichever was decided on.
-4. If restricting to just one user (Jason), no extra config needed yet — the app itself will just check `request.auth.uid` against a single allowed UID.
+3. Enable **Google** sign-in.
+4. Access is controlled by a grant system, not a hardcoded UID: anyone who signs in without access is recorded as a pending `accessRequests/{uid}` doc, and the superadmin (Jason) grants or revokes access from the app's `/admin` page. Superadmin status itself is a Firebase Auth custom claim, bootstrapped by running `npm run grant-superadmin -- <email>` locally (see `apps/web/scripts/grant-superadmin.mjs`) — do this once after Authentication is enabled.
 
 ## 6. Create the Firestore database
 
@@ -105,11 +105,22 @@ service cloud.firestore {
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    match /accessRequests/{uid} {
+      allow read, write: if request.auth != null && request.auth.token.superadmin == true;
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.status == "pending";
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.uid == uid;
+    }
   }
 }
 ```
 
-This locks every user's data to that user's own UID — no user can read or write another user's documents, and nothing is accessible unsigned.
+This locks every user's data to that user's own UID — no user can read or write another user's documents, and nothing is accessible unsigned. `accessRequests` additionally lets the superadmin (identified by the `superadmin` custom claim, not a hardcoded UID) manage everyone's access, while a regular user can only see and create their own pending request.
 
 Deploy the rules:
 ```
@@ -124,6 +135,7 @@ users/{uid}/meta/weights      -> { psychology, engineering, howthings, arthistor
 users/{uid}/meta/history      -> { entries: [{date, category, title}, ...] }
 users/{uid}/lessons/{date}    -> { category, title, body, wikiQuery, youtubeQuery, quiz }
 users/{uid}/progress/{date}   -> { qIndex, correct, done }
+accessRequests/{uid}          -> { uid, email, displayName, status, firstSeenAt, lastSeenAt, grantedAt?, grantedBy?, revokedAt? }
 ```
 
 This maps directly onto the key-value scheme the artifact version already used — same keys, just under the user's UID instead of the artifact's flat storage.

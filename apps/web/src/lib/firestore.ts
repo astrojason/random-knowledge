@@ -1,6 +1,8 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { defaultWeights, type Weights } from "@/lib/categories";
+import type { AccessRequest } from "@/lib/auth-guard";
+import { todayStr } from "@/lib/date";
 import type { DailyProgress, HistoryEntry, Lesson, StreakData } from "@/lib/types";
 
 const DEFAULT_STREAK: StreakData = { streak: 0, longest: 0, lastDate: null };
@@ -58,6 +60,60 @@ export async function setProgress(
   progress: DailyProgress
 ): Promise<void> {
   await setDoc(doc(db, "users", uid, "progress", date), progress);
+}
+
+/** Upserts the caller's own accessRequests/{uid} doc; throttled to one write per calendar day. */
+export async function recordAccessRequest(user: {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+}): Promise<void> {
+  const ref = doc(db, "accessRequests", user.uid);
+  const snap = await getDoc(ref);
+  const today = todayStr();
+  if (!snap.exists()) {
+    const request: AccessRequest = {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      status: "pending",
+      firstSeenAt: today,
+      lastSeenAt: today,
+    };
+    await setDoc(ref, request);
+    return;
+  }
+  const existing = snap.data() as AccessRequest;
+  if (existing.lastSeenAt === today) return;
+  await updateDoc(ref, { lastSeenAt: today, email: user.email, displayName: user.displayName });
+}
+
+export async function getAccessRequest(uid: string): Promise<AccessRequest | null> {
+  const snap = await getDoc(doc(db, "accessRequests", uid));
+  return snap.exists() ? (snap.data() as AccessRequest) : null;
+}
+
+/** Superadmin-only (enforced by firestore.rules): lists every access request. */
+export async function listAccessRequests(): Promise<AccessRequest[]> {
+  const snap = await getDocs(collection(db, "accessRequests"));
+  return snap.docs.map((d) => d.data() as AccessRequest);
+}
+
+/** Superadmin-only (enforced by firestore.rules). */
+export async function grantAccess(uid: string, grantedBy: string): Promise<void> {
+  await updateDoc(doc(db, "accessRequests", uid), {
+    status: "granted",
+    grantedAt: todayStr(),
+    grantedBy,
+  });
+}
+
+/** Superadmin-only (enforced by firestore.rules). */
+export async function revokeAccess(uid: string): Promise<void> {
+  await updateDoc(doc(db, "accessRequests", uid), {
+    status: "revoked",
+    revokedAt: todayStr(),
+  });
 }
 
 /** Deletes every document under users/{uid} — streak, weights, history, lessons, progress. */

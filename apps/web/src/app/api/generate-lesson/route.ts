@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { verifyIdToken } from "@/lib/firebase-admin";
+import { getAccessRequestAdmin, verifyIdToken } from "@/lib/firebase-admin";
+import { hasAppAccess, isSuperadmin, resolveAccess } from "@/lib/auth-guard";
 import { CATEGORIES, type CategoryKey } from "@/lib/categories";
 import type { GeneratedLesson } from "@/lib/types";
 
@@ -63,13 +64,20 @@ export async function POST(request: Request) {
   if (!idToken) {
     return NextResponse.json({ error: "Missing Authorization header" }, { status: 401 });
   }
+  let decoded;
   try {
-    await verifyIdToken(idToken);
+    decoded = await verifyIdToken(idToken);
   } catch (err) {
     return NextResponse.json(
       { error: `Invalid auth token: ${err instanceof Error ? err.message : "unknown error"}` },
       { status: 401 }
     );
+  }
+
+  const claims = { superadmin: decoded.superadmin === true };
+  const accessRequest = isSuperadmin(claims) ? null : await getAccessRequestAdmin(decoded.uid);
+  if (!hasAppAccess(resolveAccess(decoded.uid, claims, accessRequest))) {
+    return NextResponse.json({ error: "Access not granted for this account" }, { status: 403 });
   }
 
   let category: CategoryKey;

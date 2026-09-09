@@ -15,9 +15,11 @@ import {
   type User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import type { AuthClaims } from "@/lib/auth-guard";
 
 interface AuthContextValue {
   user: User | null;
+  claims: AuthClaims | null;
   loading: boolean;
   error: string | null;
   signIn: () => Promise<void>;
@@ -28,14 +30,21 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [claims, setClaims] = useState<AuthClaims | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       auth,
-      (u) => {
+      async (u) => {
         setUser(u);
+        try {
+          setClaims(u ? ((await u.getIdTokenResult()).claims as AuthClaims) : null);
+        } catch (err) {
+          console.error("Failed to read ID token claims", err);
+          setClaims(null);
+        }
         setLoading(false);
       },
       (err) => {
@@ -65,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, claims, loading, error, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
