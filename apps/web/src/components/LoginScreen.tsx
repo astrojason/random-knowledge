@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
 export function LoginScreen() {
@@ -18,6 +19,17 @@ export function LoginScreen() {
           Sign in with Google
         </button>
         {error && <p className="mt-4 text-[13px] text-rust">{error}</p>}
+        <p className="mt-6 text-xs text-fg-muted">
+          By signing in you agree to the{" "}
+          <Link href="/terms" className="text-accent hover:opacity-85">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="text-accent hover:opacity-85">
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </div>
     </div>
   );
