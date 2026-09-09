@@ -2,8 +2,8 @@
 
 ## Provisioning (not done by Claude Code — see setup-plan.md)
 
-- [ ] Redeploy `firestore.rules` (`firebase deploy --only firestore:rules`) — now includes the `accessRequests` grant-system rules
-- [ ] Run `npm run grant-superadmin -- jason@astrojason.com` once deployed, then sign out/in to pick up the superadmin claim
+- [ ] Create the App Hosting backend once: `firebase apphosting:backends:create` (name it `daily-lesson` to match `scripts/deploy`, or set `APPHOSTING_BACKEND` when running the script)
+- [ ] Set the production OpenAI key in Secret Manager: `firebase apphosting:secrets:set openai-api-key`
 
 ## Follow-up
 

@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Deploys apps/web to Firebase App Hosting (see apps/web/apphosting.yaml for
+# the runtime env/secrets config). One-time setup before this can succeed:
+#   firebase apphosting:backends:create   (creates the "daily-lesson" backend)
+#   firebase apphosting:secrets:set openai-api-key
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_ID="random-knowledge-ea232"
+BACKEND_ID="${APPHOSTING_BACKEND:-daily-lesson}"
+
+cd "$REPO_ROOT"
+
+echo "==> Switching to Firebase project '$PROJECT_ID'"
+firebase use "$PROJECT_ID"
+
+echo "==> Running tests"
+npm --prefix apps/web run test
+
+echo "==> Linting"
+npm --prefix apps/web run lint
+
+echo "==> Building"
+npm --prefix apps/web run build
+
+echo "==> Deploying to App Hosting backend '$BACKEND_ID'"
+firebase deploy --only "apphosting:$BACKEND_ID"
+
+echo "==> Deploy complete"
