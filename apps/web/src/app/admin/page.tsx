@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AccessPending } from "@/components/AccessPending";
-import { LoginScreen } from "@/components/LoginScreen";
+import { LandingPage } from "@/components/LandingPage";
 import { LoadingView } from "@/components/lesson/LoadingView";
 import { Card } from "@/components/lesson/Card";
 import { AdminAccessList } from "@/components/admin/AdminAccessList";
@@ -34,7 +34,7 @@ export default function AdminPage() {
       </div>
     );
   }
-  if (!user) return <LoginScreen />;
+  if (!user) return <LandingPage />;
   if (!superadmin) return <AccessPending status="pending" />;
 
   const handleGrant = async (uid: string) => {
