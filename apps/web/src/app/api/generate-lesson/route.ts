@@ -11,7 +11,13 @@ const TOKEN_TRACKER = "https://token-tracker-roan.vercel.app/api/tokens";
 const DAILY_TOKEN_LIMIT = 250_000;
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Constructed lazily (not at module load) since OPENAI_API_KEY is only
+// available at runtime, not during the build's page-data collection step.
+let openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return openai;
+}
 
 async function getTokensUsedToday(): Promise<number> {
   const res = await fetch(TOKEN_TRACKER);
@@ -103,7 +109,7 @@ export async function POST(request: Request) {
 
   let completion;
   try {
-    completion = await openai.chat.completions.create({
+    completion = await getOpenAI().chat.completions.create({
       model: OPENAI_MODEL,
       max_tokens: 1400,
       response_format: { type: "json_object" },
