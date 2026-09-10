@@ -27,6 +27,9 @@ env:
   - variable: OPENAI_MODEL
     value: "gpt-4o-mini"
     availability: [RUNTIME]
+  - variable: OPENAI_RESEARCH_MODEL
+    value: "gpt-4.1"
+    availability: [RUNTIME]
   # Set the value once via: firebase apphosting:secrets:set openai-api-key
   - variable: OPENAI_API_KEY
     secret: openai-api-key

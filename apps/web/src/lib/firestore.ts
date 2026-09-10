@@ -1,6 +1,6 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { defaultWeights, type Weights } from "@/lib/categories";
+import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from "@/lib/categories";
 import type { AccessRequest } from "@/lib/auth-guard";
 import { todayStr } from "@/lib/date";
 import type { DailyProgress, HistoryEntry, Lesson, StreakData } from "@/lib/types";
@@ -18,11 +18,26 @@ export async function setStreak(uid: string, data: StreakData): Promise<void> {
 
 export async function getWeights(uid: string): Promise<Weights> {
   const snap = await getDoc(doc(db, "users", uid, "meta", "weights"));
-  return snap.exists() ? (snap.data() as Weights) : defaultWeights();
+  // Older accounts retain their preferences and get normal weights for new categories.
+  return { ...defaultWeights(), ...(snap.exists() ? (snap.data() as Partial<Weights>) : {}) };
 }
 
 export async function setWeights(uid: string, weights: Weights): Promise<void> {
   await setDoc(doc(db, "users", uid, "meta", "weights"), weights);
+}
+
+export async function getSelectedCategories(uid: string): Promise<CategoryKey[] | null> {
+  const snap = await getDoc(doc(db, "users", uid, "meta", "categories"));
+  const saved: unknown = snap.exists() ? snap.data().selected : null;
+  if (!Array.isArray(saved)) return null;
+  const selected = CATEGORY_KEYS.filter((key) => saved.includes(key));
+  return selected.length ? selected : null;
+}
+
+export async function setSelectedCategories(uid: string, categories: CategoryKey[]): Promise<void> {
+  const selected = CATEGORY_KEYS.filter((key) => categories.includes(key));
+  if (!selected.length) throw new Error("Choose at least one category.");
+  await setDoc(doc(db, "users", uid, "meta", "categories"), { selected });
 }
 
 export async function getHistory(uid: string): Promise<HistoryEntry[]> {
@@ -118,7 +133,7 @@ export async function revokeAccess(uid: string): Promise<void> {
 
 /** Deletes every document under users/{uid} — streak, weights, history, lessons, progress. */
 export async function resetAllUserData(uid: string): Promise<void> {
-  const metaDocs = ["streak", "weights", "history"].map((id) => doc(db, "users", uid, "meta", id));
+  const metaDocs = ["streak", "weights", "history", "categories"].map((id) => doc(db, "users", uid, "meta", id));
   const [lessonDocs, progressDocs] = await Promise.all([
     getDocs(collection(db, "users", uid, "lessons")),
     getDocs(collection(db, "users", uid, "progress")),

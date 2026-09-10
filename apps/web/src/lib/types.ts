@@ -13,6 +13,15 @@ export interface GeneratedLesson {
   wikiQuery: string;
   youtubeQuery: string;
   quiz: QuizQuestion[];
+  /** Absent on lessons saved before source-backed generation. */
+  sources?: LessonSource[];
+  /** One-based source references for each body paragraph. */
+  paragraphSources?: number[][];
+}
+
+export interface LessonSource {
+  title: string;
+  url: string;
 }
 
 export interface Lesson extends GeneratedLesson {

@@ -33,5 +33,5 @@ export default function Home() {
     return <AccessPending status={status === "revoked" ? "revoked" : "pending"} />;
   }
 
-  return <DailyLesson />;
+  return <DailyLesson key={user.uid} />;
 }

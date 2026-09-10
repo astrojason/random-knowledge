@@ -9,11 +9,13 @@ import {
   getHistory,
   getLesson,
   getProgress,
+  getSelectedCategories,
   getStreak,
   getWeights,
   resetAllUserData,
   setLesson,
   setProgress,
+  setSelectedCategories,
   setStreak,
   setWeights,
 } from "@/lib/firestore";
@@ -21,7 +23,7 @@ import { advanceStreak } from "@/lib/streak";
 import { advanceQuiz, initialQuizState, selectAnswer } from "@/lib/quiz";
 import type { DailyProgress, GeneratedLesson, Lesson, StreakData } from "@/lib/types";
 
-export type Phase = "loading" | "generating" | "error" | "lesson" | "quiz" | "done";
+export type Phase = "loading" | "categories" | "generating" | "error" | "lesson" | "quiz" | "done";
 
 export function useDailyLesson(user: User | null) {
   const [phase, setPhase] = useState<Phase>("loading");
@@ -29,6 +31,7 @@ export function useDailyLesson(user: User | null) {
   const [lesson, setLessonState] = useState<Lesson | null>(null);
   const [streak, setStreakState] = useState<StreakData>({ streak: 0, longest: 0, lastDate: null });
   const [weights, setWeightsState] = useState<Weights>(defaultWeights());
+  const [selectedCategories, setSelectedCategoriesState] = useState<CategoryKey[]>(CATEGORY_KEYS);
   const [progress, setProgressState] = useState<DailyProgress | null>(null);
   const [quiz, setQuiz] = useState(initialQuizState);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -41,21 +44,28 @@ export function useDailyLesson(user: User | null) {
     setDate(today);
 
     try {
-      const [existingLesson, streakData, weightsData, history, progressData] = await Promise.all([
+      const [existingLesson, streakData, weightsData, history, progressData, categoriesData] = await Promise.all([
         getLesson(user.uid, today),
         getStreak(user.uid),
         getWeights(user.uid),
         getHistory(user.uid),
         getProgress(user.uid, today),
+        getSelectedCategories(user.uid),
       ]);
       setStreakState(streakData);
       setWeightsState(weightsData);
+      setSelectedCategoriesState(categoriesData ?? CATEGORY_KEYS);
+      setLessonState(existingLesson);
+      if (!existingLesson && !categoriesData) {
+        setPhase("categories");
+        return;
+      }
 
       let currentLesson = existingLesson;
       if (!currentLesson) {
         setPhase("generating");
         const recentCats = history.slice(-2).map((h) => h.category);
-        const category = pickCategory(weightsData, recentCats);
+        const category = pickCategory(weightsData, recentCats, categoriesData ?? CATEGORY_KEYS);
         const recentTitles = history.slice(-12).map((h) => h.title);
 
         const idToken = await user.getIdToken();
@@ -155,16 +165,24 @@ export function useDailyLesson(user: User | null) {
     }
   }
 
+  async function saveCategories(categories: CategoryKey[]) {
+    if (!user) throw new Error("Sign in to save your categories.");
+    await setSelectedCategories(user.uid, categories);
+    setSelectedCategoriesState(categories);
+    if (phase === "categories") await load();
+  }
+
   return {
     phase,
     date,
     lesson,
     streak,
     weights,
+    selectedCategories,
     progress,
     quiz,
     errorMessage,
     categoryKeys: CATEGORY_KEYS,
-    actions: { retry: load, startQuiz, selectOption, nextQuestion, adjustWeight, resetAll },
+    actions: { retry: load, startQuiz, selectOption, nextQuestion, adjustWeight, resetAll, saveCategories },
   };
 }

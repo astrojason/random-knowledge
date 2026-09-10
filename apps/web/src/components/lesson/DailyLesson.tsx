@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Card } from "@/components/lesson/Card";
+import { CategoryPicker } from "@/components/lesson/CategoryPicker";
 import { DoneView } from "@/components/lesson/DoneView";
 import { ErrorView } from "@/components/lesson/ErrorView";
 import { Header } from "@/components/lesson/Header";
@@ -13,7 +15,10 @@ import { useDailyLesson } from "@/lib/useDailyLesson";
 
 export function DailyLesson() {
   const { user, claims, signOut } = useAuth();
-  const { phase, date, lesson, streak, progress, quiz, errorMessage, actions } = useDailyLesson(user);
+  const { phase, date, lesson, streak, progress, quiz, selectedCategories, errorMessage, actions } = useDailyLesson(user);
+  const [editingCategories, setEditingCategories] = useState(false);
+  const [categoriesSaved, setCategoriesSaved] = useState(false);
+  const canEditCategories = phase === "lesson" || phase === "quiz" || phase === "done";
 
   return (
     <div className="mx-auto w-full max-w-[640px] px-4 py-10">
@@ -26,8 +31,29 @@ export function DailyLesson() {
           onSignOut={signOut}
         />
 
+        {canEditCategories && !editingCategories && (
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => { setEditingCategories(true); setCategoriesSaved(false); }} className="text-sm font-semibold text-accent underline">
+              My categories ({selectedCategories.length})
+            </button>
+            {categoriesSaved && <span role="status" className="text-xs text-fg-muted">Categories saved for future lessons.</span>}
+          </div>
+        )}
+        {(phase === "categories" || (canEditCategories && editingCategories)) && (
+          <CategoryPicker
+            key={phase === "categories" ? "initial" : "edit"}
+            selectedCategories={selectedCategories}
+            onSave={async (categories) => {
+              await actions.saveCategories(categories);
+              setEditingCategories(false);
+              setCategoriesSaved(true);
+            }}
+            onCancel={phase === "categories" ? undefined : () => setEditingCategories(false)}
+          />
+        )}
+
         {phase === "loading" && <LoadingView text="Setting things up" />}
-        {phase === "generating" && <LoadingView text="Writing today’s lesson" />}
+        {phase === "generating" && <LoadingView text="Researching and checking today’s lesson" />}
         {phase === "error" && <ErrorView message={errorMessage ?? "Unknown error"} onRetry={actions.retry} />}
         {phase === "lesson" && lesson && <LessonView lesson={lesson} onStartQuiz={actions.startQuiz} />}
         {phase === "quiz" && lesson && (
@@ -47,6 +73,8 @@ export function DailyLesson() {
             type="button"
             onClick={() => {
               if (window.confirm("Reset your streak, history, and topic preferences? This cannot be undone.")) {
+                setEditingCategories(false);
+                setCategoriesSaved(false);
                 actions.resetAll();
               }
             }}
