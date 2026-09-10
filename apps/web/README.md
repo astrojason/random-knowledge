@@ -28,6 +28,8 @@ This flow adds web-search charges and two model calls per new lesson, so it take
 
 ## Structure
 
+Streaks follow “don't miss twice”: completing a lesson and quiz adds one learning day, regardless of score. One missed day preserves the count; two consecutive missed days expire it. The personal best remains after expiration. Daily lesson dates and the cutoff use the browser/device timezone, including daylight-saving changes. Open tabs refresh after local midnight or a timezone change; an in-progress quiz stays attached to its original lesson date until it is finished. Existing date-keyed records are retained as-is because legacy records did not store a timezone or completion timestamp, so they cannot be reliably re-dated. The shared server token budget remains separate from user lesson scheduling. The header shows current/best counts and a return-today message after one missed day. Completion saves progress and streak in a single Firestore transaction and ignores duplicate completions for the same lesson date.
+
 - `src/lib/firebase.ts` / `firebase-admin.ts` — client and server Firebase init
 - `src/lib/auth-context.tsx` — Google sign-in state (`useAuth()`)
 - `src/lib/auth-guard.ts` — single-user allowlist (`NEXT_PUBLIC_ALLOWED_UID`)

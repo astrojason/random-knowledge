@@ -26,6 +26,7 @@ export function DailyLesson() {
         <Header
           date={date}
           streak={streak}
+          showStreak={phase !== "loading"}
           category={lesson?.category}
           showAdminLink={isSuperadmin(claims)}
           onSignOut={signOut}

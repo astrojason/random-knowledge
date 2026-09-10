@@ -9,10 +9,11 @@ vi.mock("firebase/firestore", () => ({
   deleteDoc: vi.fn(),
   getDocs: vi.fn(),
   updateDoc: vi.fn(),
+  runTransaction: vi.fn(),
 }));
 
-import { getDoc, setDoc } from "firebase/firestore";
-import { getSelectedCategories, setSelectedCategories } from "./firestore";
+import { getDoc, runTransaction, setDoc } from "firebase/firestore";
+import { completeDailyLesson, getSelectedCategories, setSelectedCategories } from "./firestore";
 
 function savedDocument(selected: unknown, exists = true) {
   vi.mocked(getDoc).mockResolvedValue({
@@ -48,5 +49,43 @@ describe("category preferences", () => {
   it("does not overwrite preferences with an empty selection", async () => {
     await expect(setSelectedCategories("user-a", [])).rejects.toThrow("Choose at least one category.");
     expect(setDoc).not.toHaveBeenCalled();
+  });
+});
+
+describe("streak completion transaction", () => {
+  function setup() {
+    const stored = new Map<string, unknown>([
+      ["users/user-a/meta/streak", { streak: 5, longest: 8, lastDate: "2026-01-01" }],
+    ]);
+    const writes = vi.fn((ref: string, data: unknown) => stored.set(ref, data));
+    const transaction = {
+      get: vi.fn(async (ref: string) => ({ exists: () => stored.has(ref), data: () => stored.get(ref) })),
+      set: writes,
+    };
+    vi.mocked(runTransaction).mockImplementation(async (_db, callback) => callback(transaction as unknown as Parameters<typeof callback>[0]));
+    return { stored, writes };
+  }
+  const progress = { done: true, correct: 0, total: 3, answers: [0, 0, 0] };
+
+  it("saves both progress and streak, even with no correct answers", async () => {
+    const { stored, writes } = setup();
+    const result = await completeDailyLesson("user-a", "2026-01-03", progress);
+    expect(result.streak).toEqual({ streak: 6, longest: 8, lastDate: "2026-01-03" });
+    expect(stored.get("users/user-a/progress/2026-01-03")).toEqual(progress);
+    expect(writes).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses persisted data and preserves the first completion on a retry", async () => {
+    const { writes } = setup();
+    await completeDailyLesson("user-a", "2026-01-03", progress);
+    const repeated = await completeDailyLesson("user-a", "2026-01-03", { ...progress, correct: 3 });
+    expect(repeated.streak.streak).toBe(6);
+    expect(repeated.progress.correct).toBe(0);
+    expect(writes).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects an unfinished quiz before opening a transaction", async () => {
+    await expect(completeDailyLesson("user-a", "2026-01-03", { ...progress, done: false })).rejects.toThrow("Finish the quiz");
+    expect(runTransaction).not.toHaveBeenCalled();
   });
 });

@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import { CATEGORY_KEYS, defaultWeights, pickCategory, type CategoryKey, type Weights } from "@/lib/categories";
 import { todayStr } from "@/lib/date";
 import {
   appendHistory,
+  completeDailyLesson,
   getHistory,
   getLesson,
   getProgress,
@@ -14,18 +15,16 @@ import {
   getWeights,
   resetAllUserData,
   setLesson,
-  setProgress,
   setSelectedCategories,
-  setStreak,
   setWeights,
 } from "@/lib/firestore";
-import { advanceStreak } from "@/lib/streak";
 import { advanceQuiz, initialQuizState, selectAnswer } from "@/lib/quiz";
 import type { DailyProgress, GeneratedLesson, Lesson, StreakData } from "@/lib/types";
 
 export type Phase = "loading" | "categories" | "generating" | "error" | "lesson" | "quiz" | "done";
 
 export function useDailyLesson(user: User | null) {
+  const busy = useRef(false);
   const [phase, setPhase] = useState<Phase>("loading");
   const [date, setDate] = useState(todayStr());
   const [lesson, setLessonState] = useState<Lesson | null>(null);
@@ -37,7 +36,8 @@ export function useDailyLesson(user: User | null) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!user) return;
+    if (!user || busy.current) return;
+    busy.current = true;
     setPhase("loading");
     setErrorMessage(null);
     const today = todayStr();
@@ -92,6 +92,8 @@ export function useDailyLesson(user: User | null) {
       console.error("useDailyLesson load failed:", err);
       setErrorMessage(err instanceof Error ? err.message : "Something went wrong.");
       setPhase("error");
+    } finally {
+      busy.current = false;
     }
   }, [user]);
 
@@ -102,6 +104,24 @@ export function useDailyLesson(user: User | null) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  useEffect(() => {
+    // Refresh on local midnight, waking a suspended tab, or a device timezone change.
+    // Let an in-progress quiz finish on its original lesson date before loading the next.
+    const refreshDate = () => {
+      if (document.visibilityState === "visible" && phase !== "quiz" && !busy.current && todayStr() !== date) {
+        void load();
+      }
+    };
+    const timer = window.setInterval(refreshDate, 1000);
+    window.addEventListener("focus", refreshDate);
+    document.addEventListener("visibilitychange", refreshDate);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshDate);
+      document.removeEventListener("visibilitychange", refreshDate);
+    };
+  }, [date, phase, load]);
 
   function startQuiz() {
     setQuiz(initialQuizState);
@@ -114,28 +134,30 @@ export function useDailyLesson(user: User | null) {
   }
 
   async function nextQuestion() {
-    if (!user || !lesson) return;
+    if (!user || !lesson || busy.current) return;
     const advanced = advanceQuiz(quiz, lesson.quiz.length);
     if (advanced !== "complete") {
       setQuiz(advanced);
       return;
     }
-    const newStreak = advanceStreak(streak, date);
     const finalProgress: DailyProgress = {
       done: true,
       correct: quiz.correct,
       total: lesson.quiz.length,
       answers: quiz.answers,
     };
+    busy.current = true;
     try {
-      await Promise.all([setStreak(user.uid, newStreak), setProgress(user.uid, date, finalProgress)]);
-      setStreakState(newStreak);
-      setProgressState(finalProgress);
+      const saved = await completeDailyLesson(user.uid, date, finalProgress);
+      setStreakState(saved.streak);
+      setProgressState(saved.progress);
       setPhase("done");
     } catch (err) {
       console.error("Failed to save quiz results:", err);
       setErrorMessage(err instanceof Error ? err.message : "Failed to save your results.");
       setPhase("error");
+    } finally {
+      busy.current = false;
     }
   }
 

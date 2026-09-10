@@ -1,9 +1,10 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, runTransaction, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from "@/lib/categories";
 import type { AccessRequest } from "@/lib/auth-guard";
 import { todayStr } from "@/lib/date";
 import type { DailyProgress, HistoryEntry, Lesson, StreakData } from "@/lib/types";
+import { advanceStreak } from "@/lib/streak";
 
 const DEFAULT_STREAK: StreakData = { streak: 0, longest: 0, lastDate: null };
 
@@ -75,6 +76,27 @@ export async function setProgress(
   progress: DailyProgress
 ): Promise<void> {
   await setDoc(doc(db, "users", uid, "progress", date), progress);
+}
+
+/** Saves a completed quiz and its streak together, once per lesson date across tabs/retries. */
+export async function completeDailyLesson(uid: string, date: string, progress: DailyProgress): Promise<{
+  streak: StreakData;
+  progress: DailyProgress;
+}> {
+  if (!progress.done) throw new Error("Finish the quiz before updating your streak.");
+  const streakRef = doc(db, "users", uid, "meta", "streak");
+  const progressRef = doc(db, "users", uid, "progress", date);
+  return runTransaction(db, async (transaction) => {
+    const streakSnap = await transaction.get(streakRef);
+    const progressSnap = await transaction.get(progressRef);
+    const current = streakSnap.exists() ? streakSnap.data() as StreakData : DEFAULT_STREAK;
+    const saved = progressSnap.exists() ? progressSnap.data() as DailyProgress : null;
+    if (saved?.done) return { streak: current, progress: saved };
+    const next = advanceStreak(current, date);
+    transaction.set(streakRef, next);
+    transaction.set(progressRef, progress);
+    return { streak: next, progress };
+  });
 }
 
 /** Upserts the caller's own accessRequests/{uid} doc; throttled to one write per calendar day. */
