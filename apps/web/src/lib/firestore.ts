@@ -13,10 +13,6 @@ export async function getStreak(uid: string): Promise<StreakData> {
   return snap.exists() ? (snap.data() as StreakData) : DEFAULT_STREAK;
 }
 
-export async function setStreak(uid: string, data: StreakData): Promise<void> {
-  await setDoc(doc(db, "users", uid, "meta", "streak"), data);
-}
-
 export async function getWeights(uid: string): Promise<Weights> {
   const snap = await getDoc(doc(db, "users", uid, "meta", "weights"));
   // Older accounts retain their preferences and get normal weights for new categories.
@@ -68,14 +64,6 @@ export async function setLesson(uid: string, date: string, lesson: Lesson): Prom
 export async function getProgress(uid: string, date: string): Promise<DailyProgress | null> {
   const snap = await getDoc(doc(db, "users", uid, "progress", date));
   return snap.exists() ? (snap.data() as DailyProgress) : null;
-}
-
-export async function setProgress(
-  uid: string,
-  date: string,
-  progress: DailyProgress
-): Promise<void> {
-  await setDoc(doc(db, "users", uid, "progress", date), progress);
 }
 
 /** Saves a completed quiz and its streak together, once per lesson date across tabs/retries. */

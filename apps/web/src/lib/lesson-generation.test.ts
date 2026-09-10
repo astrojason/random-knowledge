@@ -84,3 +84,53 @@ describe("source-backed lesson generation", () => {
     await expect(f.generate()).rejects.toThrow(/source review/i);
   });
 });
+
+describe("lesson validation boundaries", () => {
+  it.each([
+    { title: "x".repeat(60) },
+    { body: ["one", "two"] },
+    { body: ["one", " ", "three"] },
+    { wikiQuery: "" },
+    { youtubeQuery: 123 },
+  ])("rejects malformed lesson content: %j", async (invalid) => {
+    const f = fixture();
+    Object.assign(f.draft, invalid);
+    await expect(f.generate()).rejects.toThrow(/format/i);
+  });
+
+  it.each([
+    { options: ["A", "A", "C", "D"] },
+    { options: ["A", "B", "C"] },
+    { correctIndex: -1 },
+    { correctIndex: 1.5 },
+    { question: " " },
+    { explanation: null },
+  ])("rejects malformed quiz fields: %j", async (invalid) => {
+    const f = fixture();
+    Object.assign(f.draft.quiz[0], invalid);
+    await expect(f.generate()).rejects.toThrow(/quiz/i);
+  });
+
+  it("requires two publishers to be referenced in the lesson", async () => {
+    const f = fixture();
+    f.draft.paragraphSources = [[1], [1], [1]];
+    await expect(f.generate()).rejects.toThrow(/corroborating/i);
+  });
+
+  it.each(["not a URL", "ftp://university.example/topic", "https://user:password@university.example/topic"])("ignores unsafe or malformed citations: %s", async (url) => {
+    const f = fixture();
+    f.research.output[1].content![0].annotations[1].url = url;
+    await expect(f.generate()).rejects.toThrow(/corroborating/i);
+    expect(f.chat).not.toHaveBeenCalled();
+  });
+
+  it("deduplicates citations and uses the hostname when the title is empty", async () => {
+    const f = fixture();
+    const citations = f.research.output[1].content![0].annotations;
+    citations[0].title = "";
+    citations.push({ ...citations[0] });
+    const lesson = await f.generate();
+    expect(lesson.sources).toHaveLength(2);
+    expect(lesson.sources![0].title).toBe("museum.example");
+  });
+});

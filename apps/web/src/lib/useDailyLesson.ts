@@ -19,9 +19,9 @@ import {
   setWeights,
 } from "@/lib/firestore";
 import { advanceQuiz, initialQuizState, selectAnswer } from "@/lib/quiz";
-import type { DailyProgress, GeneratedLesson, Lesson, StreakData } from "@/lib/types";
+import type { DailyProgress, GeneratedLesson, HistoryEntry, Lesson, StreakData } from "@/lib/types";
 
-export type Phase = "loading" | "categories" | "generating" | "error" | "lesson" | "quiz" | "done";
+type Phase = "loading" | "categories" | "generating" | "error" | "lesson" | "quiz" | "done";
 
 export function useDailyLesson(user: User | null) {
   const busy = useRef(false);
@@ -34,6 +34,13 @@ export function useDailyLesson(user: User | null) {
   const [progress, setProgressState] = useState<DailyProgress | null>(null);
   const [quiz, setQuiz] = useState(initialQuizState);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const showLesson = useCallback((currentLesson: Lesson, savedProgress: DailyProgress | null) => {
+    setLessonState(currentLesson);
+    setProgressState(savedProgress);
+    setQuiz(initialQuizState);
+    setPhase(savedProgress?.done ? "done" : "lesson");
+  }, []);
 
   const load = useCallback(async () => {
     if (!user || busy.current) return;
@@ -64,38 +71,18 @@ export function useDailyLesson(user: User | null) {
       let currentLesson = existingLesson;
       if (!currentLesson) {
         setPhase("generating");
-        const recentCats = history.slice(-2).map((h) => h.category);
-        const category = pickCategory(weightsData, recentCats, categoriesData ?? CATEGORY_KEYS);
-        const recentTitles = history.slice(-12).map((h) => h.title);
-
-        const idToken = await user.getIdToken();
-        const res = await fetch("/api/generate-lesson", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({ category, recentTitles }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-          throw new Error(body.error || `HTTP ${res.status}`);
-        }
-        const generated: GeneratedLesson & { category: CategoryKey } = await res.json();
-        currentLesson = generated;
-        await setLesson(user.uid, today, currentLesson);
-        await appendHistory(user.uid, { date: today, category, title: currentLesson.title }, history);
+        currentLesson = await createDailyLesson(user, today, weightsData, history, categoriesData ?? CATEGORY_KEYS);
       }
 
-      setLessonState(currentLesson);
-      setProgressState(progressData);
-      setQuiz(initialQuizState);
-      setPhase(progressData?.done ? "done" : "lesson");
+      showLesson(currentLesson, progressData);
     } catch (err) {
       console.error("useDailyLesson load failed:", err);
-      setErrorMessage(err instanceof Error ? err.message : "Something went wrong.");
+      setErrorMessage(errorMessageFor(err, "Something went wrong."));
       setPhase("error");
     } finally {
       busy.current = false;
     }
-  }, [user]);
+  }, [user, showLesson]);
 
   useEffect(() => {
     // Intentional: (re)load today's lesson/streak/progress whenever the
@@ -109,7 +96,7 @@ export function useDailyLesson(user: User | null) {
     // Refresh on local midnight, waking a suspended tab, or a device timezone change.
     // Let an in-progress quiz finish on its original lesson date before loading the next.
     const refreshDate = () => {
-      if (document.visibilityState === "visible" && phase !== "quiz" && !busy.current && todayStr() !== date) {
+      if (canRefreshLesson(phase, busy.current) && todayStr() !== date) {
         void load();
       }
     };
@@ -140,21 +127,25 @@ export function useDailyLesson(user: User | null) {
       setQuiz(advanced);
       return;
     }
+    await saveQuizResults(user.uid, lesson);
+  }
+
+  async function saveQuizResults(uid: string, completedLesson: Lesson) {
     const finalProgress: DailyProgress = {
       done: true,
       correct: quiz.correct,
-      total: lesson.quiz.length,
+      total: completedLesson.quiz.length,
       answers: quiz.answers,
     };
     busy.current = true;
     try {
-      const saved = await completeDailyLesson(user.uid, date, finalProgress);
+      const saved = await completeDailyLesson(uid, date, finalProgress);
       setStreakState(saved.streak);
       setProgressState(saved.progress);
       setPhase("done");
     } catch (err) {
       console.error("Failed to save quiz results:", err);
-      setErrorMessage(err instanceof Error ? err.message : "Failed to save your results.");
+      setErrorMessage(errorMessageFor(err, "Failed to save your results."));
       setPhase("error");
     } finally {
       busy.current = false;
@@ -169,7 +160,7 @@ export function useDailyLesson(user: User | null) {
       await setWeights(user.uid, next);
     } catch (err) {
       console.error("Failed to save weight adjustment:", err);
-      setErrorMessage(err instanceof Error ? err.message : "Failed to save your preference.");
+      setErrorMessage(errorMessageFor(err, "Failed to save your preference."));
     }
   }
 
@@ -182,7 +173,7 @@ export function useDailyLesson(user: User | null) {
       await load();
     } catch (err) {
       console.error("Reset failed:", err);
-      setErrorMessage(err instanceof Error ? err.message : "Reset failed.");
+      setErrorMessage(errorMessageFor(err, "Reset failed."));
       setPhase("error");
     }
   }
@@ -207,4 +198,32 @@ export function useDailyLesson(user: User | null) {
     categoryKeys: CATEGORY_KEYS,
     actions: { retry: load, startQuiz, selectOption, nextQuestion, adjustWeight, resetAll, saveCategories },
   };
+}
+
+function errorMessageFor(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function canRefreshLesson(phase: Phase, busy: boolean): boolean {
+  return document.visibilityState === "visible" && phase !== "quiz" && !busy;
+}
+
+async function createDailyLesson(user: User, date: string, weights: Weights, history: HistoryEntry[], categories: CategoryKey[]): Promise<Lesson> {
+  const recentCats = history.slice(-2).map((entry) => entry.category);
+  const category = pickCategory(weights, recentCats, categories);
+  const recentTitles = history.slice(-12).map((entry) => entry.title);
+  const idToken = await user.getIdToken();
+  const res = await fetch("/api/generate-lesson", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ category, recentTitles }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(body.error || `HTTP ${res.status}`);
+  }
+  const lesson: GeneratedLesson & { category: CategoryKey } = await res.json();
+  await setLesson(user.uid, date, lesson);
+  await appendHistory(user.uid, { date, category, title: lesson.title }, history);
+  return lesson;
 }

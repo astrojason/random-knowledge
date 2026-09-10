@@ -15,10 +15,11 @@ import { useDailyLesson } from "@/lib/useDailyLesson";
 
 export function DailyLesson() {
   const { user, claims, signOut } = useAuth();
-  const { phase, date, lesson, streak, progress, quiz, selectedCategories, errorMessage, actions } = useDailyLesson(user);
+  const state = useDailyLesson(user);
+  const { phase, date, lesson, streak, selectedCategories, actions } = state;
   const [editingCategories, setEditingCategories] = useState(false);
   const [categoriesSaved, setCategoriesSaved] = useState(false);
-  const canEditCategories = phase === "lesson" || phase === "quiz" || phase === "done";
+  const canEditCategories = ["lesson", "quiz", "done"].includes(phase);
 
   return (
     <div className="mx-auto w-full max-w-[640px] px-4 py-10">
@@ -40,7 +41,7 @@ export function DailyLesson() {
             {categoriesSaved && <span role="status" className="text-xs text-fg-muted">Categories saved for future lessons.</span>}
           </div>
         )}
-        {(phase === "categories" || (canEditCategories && editingCategories)) && (
+        {showCategoryPicker(phase, editingCategories) && (
           <CategoryPicker
             key={phase === "categories" ? "initial" : "edit"}
             selectedCategories={selectedCategories}
@@ -53,21 +54,7 @@ export function DailyLesson() {
           />
         )}
 
-        {phase === "loading" && <LoadingView text="Setting things up" />}
-        {phase === "generating" && <LoadingView text="Researching and checking today’s lesson" />}
-        {phase === "error" && <ErrorView message={errorMessage ?? "Unknown error"} onRetry={actions.retry} />}
-        {phase === "lesson" && lesson && <LessonView lesson={lesson} onStartQuiz={actions.startQuiz} />}
-        {phase === "quiz" && lesson && (
-          <QuizView lesson={lesson} quiz={quiz} onSelect={actions.selectOption} onNext={actions.nextQuestion} />
-        )}
-        {phase === "done" && lesson && progress && (
-          <DoneView
-            lesson={lesson}
-            progress={progress}
-            onMore={() => actions.adjustWeight(lesson.category, 4)}
-            onLess={() => actions.adjustWeight(lesson.category, -4)}
-          />
-        )}
+        <LessonPhase state={state} />
 
         <div className="mt-6 flex justify-between border-t border-border pt-3">
           <button
@@ -88,4 +75,27 @@ export function DailyLesson() {
       </Card>
     </div>
   );
+}
+
+function LessonPhase({ state }: { state: ReturnType<typeof useDailyLesson> }) {
+  const { phase, errorMessage, actions } = state;
+  if (phase === "loading") return <LoadingView text="Setting things up" />;
+  if (phase === "generating") return <LoadingView text="Researching and checking today’s lesson" />;
+  if (phase === "error") return <ErrorView message={errorMessage ?? "Unknown error"} onRetry={actions.retry} />;
+  return <LoadedLesson state={state} />;
+}
+
+function LoadedLesson({ state }: { state: ReturnType<typeof useDailyLesson> }) {
+  const { phase, lesson, progress, quiz, actions } = state;
+  if (!lesson) return null;
+  if (phase === "lesson") return <LessonView lesson={lesson} onStartQuiz={actions.startQuiz} />;
+  if (phase === "quiz") return <QuizView lesson={lesson} quiz={quiz} onSelect={actions.selectOption} onNext={actions.nextQuestion} />;
+  if (phase !== "done" || !progress) return null;
+  return <DoneView lesson={lesson} progress={progress}
+    onMore={() => actions.adjustWeight(lesson.category, 4)}
+    onLess={() => actions.adjustWeight(lesson.category, -4)} />;
+}
+
+function showCategoryPicker(phase: string, editing: boolean): boolean {
+  return phase === "categories" || (["lesson", "quiz", "done"].includes(phase) && editing);
 }

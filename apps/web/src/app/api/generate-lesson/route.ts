@@ -34,7 +34,7 @@ async function reportTokensUsed(count: number): Promise<void> {
   });
 }
 
-export async function POST(request: Request) {
+async function authorizeRequest(request: Request) {
   const authHeader = request.headers.get("authorization") || "";
   const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!idToken) {
@@ -56,6 +56,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Access not granted for this account" }, { status: 403 });
   }
 
+  return null;
+}
+
+export async function POST(request: Request) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   let category: CategoryKey;
   let recentTitles: string[];
   try {

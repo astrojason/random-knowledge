@@ -15,26 +15,28 @@ function researchSources(response: Response): LessonSource[] {
     throw new Error("Research returned no web sources. Please try again.");
   }
   const sources = new Map<string, LessonSource>();
-  for (const item of response.output) {
-    if (item.type !== "message") continue;
-    for (const part of item.content) {
-      if (part.type !== "output_text") continue;
-      for (const citation of part.annotations) {
-        if (citation.type !== "url_citation") continue;
-        try {
-          const url = new URL(citation.url);
-          if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) continue;
-          sources.set(citation.url, { title: citation.title || url.hostname, url: citation.url });
-        } catch {
-          console.warn("Ignoring a malformed research citation URL.");
-        }
-      }
-    }
+  const citations = response.output.flatMap((item) => item.type === "message" ? item.content : [])
+    .flatMap((part) => part.type === "output_text" ? part.annotations : []);
+  for (const citation of citations) {
+    if (citation.type !== "url_citation") continue;
+    const source = parseCitation(citation);
+    if (source) sources.set(source.url, source);
   }
   const result = [...sources.values()];
   const hosts = new Set(result.map((source) => new URL(source.url).hostname.replace(/^www\./, "")));
   if (hosts.size < 2) throw new Error("Could not find enough corroborating sources. Please try again.");
   return result;
+}
+
+function parseCitation(citation: { url: string; title: string }): LessonSource | null {
+  try {
+    const url = new URL(citation.url);
+    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) return null;
+    return { title: citation.title || url.hostname, url: citation.url };
+  } catch {
+    console.warn("Ignoring a malformed research citation URL.");
+    return null;
+  }
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -45,17 +47,34 @@ function isText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function parseLesson(value: unknown, sources: LessonSource[]): GeneratedLesson {
+function isTextArray(value: unknown, length: number): value is string[] {
+  return Array.isArray(value) && value.length === length && value.every(isText);
+}
+
+function isAnswerIndex(value: unknown): boolean {
+  return Number.isInteger(value) && Number(value) >= 0 && Number(value) < 4;
+}
+
+function isQuizQuestion(value: unknown): value is QuizQuestion {
+  if (!isObject(value)) return false;
+  const validOptions = isTextArray(value.options, 4) && new Set(value.options).size === 4;
+  const validIndex = isAnswerIndex(value.correctIndex);
+  return isText(value.question) && isText(value.explanation) && validOptions && validIndex;
+}
+
+function parseLessonContent(value: unknown) {
   if (!isObject(value) || !isText(value.title) || value.title.length >= 60 ||
-      !Array.isArray(value.body) || value.body.length !== 3 || !value.body.every(isText) ||
-      !isText(value.wikiQuery) || !isText(value.youtubeQuery)) {
+      !isTextArray(value.body, 3) || !isText(value.wikiQuery) || !isText(value.youtubeQuery)) {
     throw new Error("The lesson format was invalid. Please try again.");
   }
-  if (!Array.isArray(value.quiz) || value.quiz.length !== 3 || !value.quiz.every((q: unknown) =>
-    isObject(q) && isText(q.question) && isText(q.explanation) && Array.isArray(q.options) &&
-    q.options.length === 4 && q.options.every(isText) && new Set(q.options).size === 4 &&
-    Number.isInteger(q.correctIndex) && Number(q.correctIndex) >= 0 && Number(q.correctIndex) < 4
-  )) throw new Error("The lesson quiz was invalid. Please try again.");
+  return value as typeof value & { title: string; body: string[]; wikiQuery: string; youtubeQuery: string };
+}
+
+function parseLesson(input: unknown, sources: LessonSource[]): GeneratedLesson {
+  const value = parseLessonContent(input);
+  if (!Array.isArray(value.quiz) || value.quiz.length !== 3 || !value.quiz.every(isQuizQuestion)) {
+    throw new Error("The lesson quiz was invalid. Please try again.");
+  }
 
   if (!Array.isArray(value.paragraphSources) || value.paragraphSources.length !== 3 ||
       !value.paragraphSources.every((refs: unknown) => Array.isArray(refs) && refs.length > 0 &&
@@ -69,7 +88,7 @@ function parseLesson(value: unknown, sources: LessonSource[]): GeneratedLesson {
   // Construct the response explicitly: generated URLs and extra model fields are never trusted.
   return {
     title: value.title, body: value.body, wikiQuery: value.wikiQuery, youtubeQuery: value.youtubeQuery,
-    quiz: value.quiz as unknown as QuizQuestion[], sources,
+    quiz: value.quiz, sources,
     paragraphSources: value.paragraphSources as number[][],
   };
 }

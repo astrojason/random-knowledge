@@ -1,80 +1,31 @@
-/*
- * Design tokens. Each theme is a [data-theme='name'] block overriding these
- * variables. No data-theme attribute on <html> falls back to the OS
- * light/dark preference (see the dark media query below).
- *
- * To add a theme: add a block here, then add its name to THEME_VALUES in
- * src/lib/theme.ts.
+/* Design tokens follow the OS preference unless an explicit theme is selected.
+ * To add a theme, add its selector here and its name to THEME_VALUES in src/lib/theme.ts.
  */
 
 :root {
-  --color-bg: #e9e1cc;
-  --color-surface: #f2ecdd;
-  --color-border: #e3dac2;
-  --color-fg: #2a2a28;
-  --color-fg-strong: #1c2b39;
-  --color-fg-muted: #6b6357;
-  --color-accent: #2f6e68;
-  --color-accent-fg: #f2ecdd;
-  --color-accent-soft: rgb(47 110 104 / 0.09);
-  --color-rust: #b8622e;
-  --color-rust-fg: #f2ecdd;
-  --color-rust-soft: rgb(184 98 46 / 0.1);
-  --color-correct: rgb(47 110 104 / 0.12);
-  --color-incorrect: rgb(184 98 46 / 0.1);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #141b22;
-    --color-surface: #1c2730;
-    --color-border: #2c3944;
-    --color-fg: #dcd6c8;
-    --color-fg-strong: #f2ecdd;
-    --color-fg-muted: #8b9199;
-    --color-accent: #5fb3aa;
-    --color-accent-fg: #10201d;
-    --color-accent-soft: rgb(95 179 170 / 0.14);
-    --color-rust: #e08a55;
-    --color-rust-fg: #201209;
-    --color-rust-soft: rgb(224 138 85 / 0.14);
-    --color-correct: rgb(95 179 170 / 0.16);
-    --color-incorrect: rgb(224 138 85 / 0.14);
-  }
+  color-scheme: light dark;
+  --color-bg: light-dark(#e9e1cc, #141b22);
+  --color-surface: light-dark(#f2ecdd, #1c2730);
+  --color-border: light-dark(#e3dac2, #2c3944);
+  --color-fg: light-dark(#2a2a28, #dcd6c8);
+  --color-fg-strong: light-dark(#1c2b39, #f2ecdd);
+  --color-fg-muted: light-dark(#6b6357, #8b9199);
+  --color-accent: light-dark(#2f6e68, #5fb3aa);
+  --color-accent-fg: light-dark(#f2ecdd, #10201d);
+  --color-accent-soft: light-dark(rgb(47 110 104 / 0.09), rgb(95 179 170 / 0.14));
+  --color-rust: light-dark(#b8622e, #e08a55);
+  --color-rust-fg: light-dark(#f2ecdd, #201209);
+  --color-rust-soft: light-dark(rgb(184 98 46 / 0.1), rgb(224 138 85 / 0.14));
+  --color-correct: light-dark(rgb(47 110 104 / 0.12), rgb(95 179 170 / 0.16));
+  --color-incorrect: light-dark(rgb(184 98 46 / 0.1), rgb(224 138 85 / 0.14));
 }
 
 [data-theme='paper'] {
-  --color-bg: #e9e1cc;
-  --color-surface: #f2ecdd;
-  --color-border: #e3dac2;
-  --color-fg: #2a2a28;
-  --color-fg-strong: #1c2b39;
-  --color-fg-muted: #6b6357;
-  --color-accent: #2f6e68;
-  --color-accent-fg: #f2ecdd;
-  --color-accent-soft: rgb(47 110 104 / 0.09);
-  --color-rust: #b8622e;
-  --color-rust-fg: #f2ecdd;
-  --color-rust-soft: rgb(184 98 46 / 0.1);
-  --color-correct: rgb(47 110 104 / 0.12);
-  --color-incorrect: rgb(184 98 46 / 0.1);
+  color-scheme: light;
 }
 
 [data-theme='dusk'] {
-  --color-bg: #141b22;
-  --color-surface: #1c2730;
-  --color-border: #2c3944;
-  --color-fg: #dcd6c8;
-  --color-fg-strong: #f2ecdd;
-  --color-fg-muted: #8b9199;
-  --color-accent: #5fb3aa;
-  --color-accent-fg: #10201d;
-  --color-accent-soft: rgb(95 179 170 / 0.14);
-  --color-rust: #e08a55;
-  --color-rust-fg: #201209;
-  --color-rust-soft: rgb(224 138 85 / 0.14);
-  --color-correct: rgb(95 179 170 / 0.16);
-  --color-incorrect: rgb(224 138 85 / 0.14);
+  color-scheme: dark;
 }
 
 @theme inline {
