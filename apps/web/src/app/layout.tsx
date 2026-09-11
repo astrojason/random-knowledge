@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Lora } from "next/font/google";
 import Script from "next/script";
 import { AuthProvider } from "@/lib/auth-context";
+import { Footer } from "@/components/Footer";
 import { STORAGE_KEY, THEME_VALUES } from "@/lib/theme";
 import "./globals.css";
 
@@ -42,8 +43,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {THEME_INIT_SCRIPT}
         </Script>
       </head>
-      <body className="min-h-full bg-bg font-sans text-fg antialiased">
-        <AuthProvider>{children}</AuthProvider>
+      <body className="flex min-h-screen flex-col bg-bg font-sans text-fg antialiased">
+        <div className="flex-1">
+          <AuthProvider>{children}</AuthProvider>
+        </div>
+        <Footer />
       </body>
     </html>
   );
