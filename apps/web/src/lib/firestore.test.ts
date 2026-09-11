@@ -13,7 +13,15 @@ vi.mock("firebase/firestore", () => ({
 }));
 
 import { getDoc, runTransaction, setDoc } from "firebase/firestore";
-import { completeDailyLesson, getSelectedCategories, setSelectedCategories } from "./firestore";
+import { completeDailyLesson, getLesson, getSelectedCategories, setLesson, setSelectedCategories } from "./firestore";
+import type { Lesson } from "./types";
+
+/** Firestore's setDoc() rejects any value where an array directly contains another array. */
+function hasNestedArray(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some((item) => Array.isArray(item) || hasNestedArray(item));
+  if (value && typeof value === "object") return Object.values(value).some(hasNestedArray);
+  return false;
+}
 
 function savedDocument(selected: unknown, exists = true) {
   vi.mocked(getDoc).mockResolvedValue({
@@ -49,6 +57,34 @@ describe("category preferences", () => {
   it("does not overwrite preferences with an empty selection", async () => {
     await expect(setSelectedCategories("user-a", [])).rejects.toThrow("Choose at least one category.");
     expect(setDoc).not.toHaveBeenCalled();
+  });
+});
+
+describe("lesson persistence", () => {
+  const lesson: Lesson = {
+    category: "physics",
+    title: "Newton's laws",
+    body: ["p1", "p2", "p3"],
+    wikiQuery: "Newton's laws",
+    youtubeQuery: "Newton's laws",
+    quiz: [{ question: "q", options: ["a", "b"], correctIndex: 0, explanation: "e" }],
+    sources: [{ title: "Wikipedia", url: "https://en.wikipedia.org/wiki/Newton" }],
+    paragraphSources: [[1], [2], [1, 2]],
+  };
+
+  it("never sends setDoc a value with an array directly containing another array", async () => {
+    await setLesson("user-a", "2026-09-11", lesson);
+    expect(setDoc).toHaveBeenCalledTimes(1);
+    const written = vi.mocked(setDoc).mock.calls[0][1];
+    expect(hasNestedArray(written)).toBe(false);
+  });
+
+  it("round-trips paragraphSources through save and load unchanged", async () => {
+    await setLesson("user-a", "2026-09-11", lesson);
+    const written = vi.mocked(setDoc).mock.calls[0][1];
+    vi.mocked(getDoc).mockResolvedValue({ exists: () => true, data: () => written } as unknown as Awaited<ReturnType<typeof getDoc>>);
+    const loaded = await getLesson("user-a", "2026-09-11");
+    expect(loaded).toEqual(lesson);
   });
 });
 
