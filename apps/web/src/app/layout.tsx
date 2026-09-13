@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Lora } from "next/font/google";
 import Script from "next/script";
 import { AuthProvider } from "@/lib/auth-context";
@@ -29,6 +29,23 @@ const lora = Lora({
 export const metadata: Metadata = {
   title: "Random Knowledge",
   description: "One short lesson a day, with a quick comprehension check.",
+  applicationName: "Random Knowledge",
+  appleWebApp: {
+    capable: true,
+    title: "Random Knowledge",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#e9e1cc" },
+    { media: "(prefers-color-scheme: dark)", color: "#141b22" },
+  ],
 };
 
 // Every page here is a per-signed-in-user view driven by client-side Firebase
