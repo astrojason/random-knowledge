@@ -4,11 +4,10 @@ import { getAccessRequestAdmin, verifyIdToken } from "@/lib/firebase-admin";
 import { hasAppAccess, isSuperadmin, resolveAccess } from "@/lib/auth-guard";
 import { CATEGORIES, type CategoryKey } from "@/lib/categories";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
+import { DAILY_TOKEN_LIMIT, getTokensUsedToday, reportTokensUsed } from "@/lib/token-budget";
 
 export const dynamic = "force-dynamic";
 
-const TOKEN_TRACKER = "https://token-tracker-roan.vercel.app/api/tokens";
-const DAILY_TOKEN_LIMIT = 250_000;
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const OPENAI_RESEARCH_MODEL = process.env.OPENAI_RESEARCH_MODEL || "gpt-4.1";
 
@@ -18,20 +17,6 @@ let openai: OpenAI | null = null;
 function getOpenAI(): OpenAI {
   if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   return openai;
-}
-
-async function getTokensUsedToday(): Promise<number> {
-  const res = await fetch(TOKEN_TRACKER);
-  const { tokens } = (await res.json()) as { tokens: number };
-  return tokens;
-}
-
-async function reportTokensUsed(count: number): Promise<void> {
-  await fetch(TOKEN_TRACKER, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tokens: count }),
-  });
 }
 
 async function authorizeRequest(request: Request) {

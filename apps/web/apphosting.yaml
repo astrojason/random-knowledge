@@ -34,3 +34,9 @@ env:
   - variable: OPENAI_API_KEY
     secret: openai-api-key
     availability: [RUNTIME]
+  # Bearer token required by /api/cron/generate-daily-lesson, so only the
+  # Cloud Scheduler job (not the public internet) can trigger it.
+  # Set the value once via: firebase apphosting:secrets:set cron-secret
+  - variable: CRON_SECRET
+    secret: cron-secret
+    availability: [RUNTIME]

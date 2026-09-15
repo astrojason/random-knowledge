@@ -3,6 +3,7 @@ import { db } from "@/lib/firebase";
 import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from "@/lib/categories";
 import type { AccessRequest } from "@/lib/auth-guard";
 import { todayStr } from "@/lib/date";
+import { fromFirestoreLesson, toFirestoreLesson } from "@/lib/lesson-storage";
 import type { DailyProgress, HistoryEntry, Lesson, StreakData } from "@/lib/types";
 import { advanceStreak } from "@/lib/streak";
 
@@ -52,24 +53,9 @@ export async function appendHistory(
   return next;
 }
 
-/** Firestore rejects arrays that directly contain other arrays, so paragraphSources (number[][]) is wrapped per-entry for storage. */
-function toFirestoreLesson(lesson: Lesson) {
-  return {
-    ...lesson,
-    paragraphSources: lesson.paragraphSources?.map((refs) => ({ refs })),
-  };
-}
-
-function fromFirestoreLesson(data: ReturnType<typeof toFirestoreLesson>): Lesson {
-  return {
-    ...data,
-    paragraphSources: data.paragraphSources?.map((entry) => entry.refs),
-  };
-}
-
 export async function getLesson(uid: string, date: string): Promise<Lesson | null> {
   const snap = await getDoc(doc(db, "users", uid, "lessons", date));
-  return snap.exists() ? fromFirestoreLesson(snap.data() as ReturnType<typeof toFirestoreLesson>) : null;
+  return snap.exists() ? fromFirestoreLesson(snap.data() as Parameters<typeof fromFirestoreLesson>[0]) : null;
 }
 
 export async function setLesson(uid: string, date: string, lesson: Lesson): Promise<void> {
