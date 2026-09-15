@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
+import { syncAppBadge } from "@/lib/app-badge";
 import { CATEGORY_KEYS, defaultWeights, pickCategory, type CategoryKey, type Weights } from "@/lib/categories";
 import { todayStr } from "@/lib/date";
 import {
@@ -91,6 +92,10 @@ export function useDailyLesson(user: User | null) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  useEffect(() => {
+    syncAppBadge(phase === "lesson" || phase === "quiz");
+  }, [phase]);
 
   useEffect(() => {
     // Refresh on local midnight, waking a suspended tab, or a device timezone change.
