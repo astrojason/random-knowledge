@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { pickCategory } from "@/lib/categories";
 import { todayStr } from "@/lib/date";
 import { getDailyGenerationContextAdmin, listGrantedUserIds, saveDailyLessonAdmin } from "@/lib/firebase-admin";
+import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
 import { DAILY_TOKEN_LIMIT, getTokensUsedToday, reportTokensUsed } from "@/lib/token-budget";
 import type { Lesson } from "@/lib/types";
@@ -108,6 +109,7 @@ export async function POST(request: Request) {
     }
 
     if (generated) {
+      generated = await attachLessonAudio(`lesson-audio/${uid}/${date}.mp3`, generated);
       await saveDailyLessonAdmin(uid, date, generated, context.history);
       results.push({ uid, status: "generated" });
     } else if (!stoppedForTokenLimit) {

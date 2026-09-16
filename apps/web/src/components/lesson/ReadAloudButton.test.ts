@@ -13,11 +13,27 @@ const lesson: Lesson = {
   wikiQuery: "glaciers", youtubeQuery: "glaciers", quiz: [],
 };
 
+const lessonWithAudio: Lesson = { ...lesson, audioUrl: "https://storage.example/lesson.mp3" };
+
 class FakeUtterance {
   text: string;
   onend: (() => void) | null = null;
   onerror: (() => void) | null = null;
   constructor(text: string) { this.text = text; }
+}
+
+class FakeAudio {
+  static instances: FakeAudio[] = [];
+  src: string;
+  onended: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  currentTime = 0;
+  play = vi.fn();
+  pause = vi.fn();
+  constructor(src: string) {
+    this.src = src;
+    FakeAudio.instances.push(this);
+  }
 }
 
 let container: HTMLDivElement;
@@ -36,14 +52,16 @@ function button(text: string) {
   return [...container.querySelectorAll("button")].find((b) => b.textContent === text) ?? null;
 }
 
-async function mount() {
-  await act(async () => root.render(createElement(ReadAloudButton, { lesson })));
+async function mount(lessonToRender: Lesson = lesson) {
+  await act(async () => root.render(createElement(ReadAloudButton, { lesson: lessonToRender })));
 }
 
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("speechSynthesis", { speak, pause, resume, cancel });
   vi.stubGlobal("SpeechSynthesisUtterance", FakeUtterance);
+  vi.stubGlobal("Audio", FakeAudio);
+  FakeAudio.instances = [];
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -94,5 +112,50 @@ describe("ReadAloudButton", () => {
 
     await act(async () => root.unmount());
     expect(cancel).toHaveBeenCalled();
+  });
+});
+
+describe("ReadAloudButton with a cloned-voice recording", () => {
+  it("plays the audio file instead of using speech synthesis", async () => {
+    await mount(lessonWithAudio);
+    await click(button("Listen to this lesson"));
+
+    expect(FakeAudio.instances).toHaveLength(1);
+    expect(FakeAudio.instances[0].src).toBe(lessonWithAudio.audioUrl);
+    expect(FakeAudio.instances[0].play).toHaveBeenCalledTimes(1);
+    expect(speak).not.toHaveBeenCalled();
+    expect(button("Pause")).not.toBeNull();
+  });
+
+  it("pauses and resumes the audio element without recreating it", async () => {
+    await mount(lessonWithAudio);
+    await click(button("Listen to this lesson"));
+
+    await click(button("Pause"));
+    expect(FakeAudio.instances[0].pause).toHaveBeenCalledTimes(1);
+    expect(button("Resume")).not.toBeNull();
+
+    await click(button("Resume"));
+    expect(FakeAudio.instances[0].play).toHaveBeenCalledTimes(2);
+    expect(FakeAudio.instances).toHaveLength(1);
+  });
+
+  it("stops playback and resets to the start", async () => {
+    await mount(lessonWithAudio);
+    await click(button("Listen to this lesson"));
+
+    FakeAudio.instances[0].currentTime = 42;
+    await click(button("Stop"));
+    expect(FakeAudio.instances[0].pause).toHaveBeenCalled();
+    expect(FakeAudio.instances[0].currentTime).toBe(0);
+    expect(button("Listen to this lesson")).not.toBeNull();
+  });
+
+  it("pauses the audio element when unmounted", async () => {
+    await mount(lessonWithAudio);
+    await click(button("Listen to this lesson"));
+
+    await act(async () => root.unmount());
+    expect(FakeAudio.instances[0].pause).toHaveBeenCalled();
   });
 });

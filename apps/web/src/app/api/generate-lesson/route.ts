@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { getAccessRequestAdmin, verifyIdToken } from "@/lib/firebase-admin";
 import { hasAppAccess, isSuperadmin, resolveAccess } from "@/lib/auth-guard";
 import { CATEGORIES, type CategoryKey } from "@/lib/categories";
+import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
 import { DAILY_TOKEN_LIMIT, getTokensUsedToday, reportTokensUsed } from "@/lib/token-budget";
 
@@ -19,7 +20,7 @@ function getOpenAI(): OpenAI {
   return openai;
 }
 
-async function authorizeRequest(request: Request) {
+async function authorizeRequest(request: Request): Promise<NextResponse | { uid: string }> {
   const authHeader = request.headers.get("authorization") || "";
   const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!idToken) {
@@ -41,12 +42,13 @@ async function authorizeRequest(request: Request) {
     return NextResponse.json({ error: "Access not granted for this account" }, { status: 403 });
   }
 
-  return null;
+  return { uid: decoded.uid };
 }
 
 export async function POST(request: Request) {
-  const denied = await authorizeRequest(request);
-  if (denied) return denied;
+  const authorized = await authorizeRequest(request);
+  if (authorized instanceof NextResponse) return authorized;
+  const { uid } = authorized;
   let category: CategoryKey;
   let recentTitles: string[];
   try {
@@ -80,7 +82,8 @@ export async function POST(request: Request) {
         await reportTokensUsed(count).catch((err) => console.error("Failed to report lesson tokens", err));
       },
     });
-    return NextResponse.json({ category, ...generated });
+    const lesson = await attachLessonAudio(`lesson-audio/${uid}/${Date.now()}.mp3`, { category, ...generated });
+    return NextResponse.json(lesson);
   } catch (err) {
     console.error("Source-backed lesson generation failed", err);
     return NextResponse.json(

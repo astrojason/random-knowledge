@@ -1,9 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { getAccessRequestAdmin, verifyIdToken } from "@/lib/firebase-admin";
+import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
 
 vi.mock("@/lib/firebase-admin", () => ({ getAccessRequestAdmin: vi.fn(), verifyIdToken: vi.fn() }));
+vi.mock("@/lib/lesson-audio", () => ({ attachLessonAudio: vi.fn() }));
 vi.mock("@/lib/lesson-generation", () => ({ generateSourcedLesson: vi.fn() }));
 vi.mock("openai", () => ({ default: class OpenAI {} }));
 
@@ -16,6 +18,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ tokens: 0 })));
   vi.mocked(verifyIdToken).mockResolvedValue({ uid: "reader", superadmin: true } as unknown as Awaited<ReturnType<typeof verifyIdToken>>);
   vi.mocked(generateSourcedLesson).mockResolvedValue({ title: "Verified lesson" } as Awaited<ReturnType<typeof generateSourcedLesson>>);
+  vi.mocked(attachLessonAudio).mockImplementation(async (_path, l) => l);
 });
 
 it.each(["", "Basic token", "Bearer "])("rejects missing bearer tokens (%s)", async (header) => {
@@ -51,6 +54,16 @@ it("passes only bounded text titles to generation", async () => {
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ category: "nature", title: "Verified lesson" });
   expect(generateSourcedLesson).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ recentTitles: Array(12).fill("x".repeat(200)) }));
+});
+
+it("synthesizes narration for the generated lesson before responding", async () => {
+  vi.mocked(attachLessonAudio).mockResolvedValue({ category: "nature", title: "Verified lesson", audioUrl: "https://storage.example/lesson.mp3" } as unknown as Awaited<ReturnType<typeof attachLessonAudio>>);
+  const response = await POST(request());
+  expect(attachLessonAudio).toHaveBeenCalledWith(
+    expect.stringMatching(/^lesson-audio\/reader\/\d+\.mp3$/),
+    { category: "nature", title: "Verified lesson" }
+  );
+  expect(await response.json()).toEqual({ category: "nature", title: "Verified lesson", audioUrl: "https://storage.example/lesson.mp3" });
 });
 
 it("returns a generation failure without a lesson", async () => {

@@ -17,6 +17,8 @@ export interface GeneratedLesson {
   sources?: LessonSource[];
   /** One-based source references for each body paragraph. */
   paragraphSources?: number[][];
+  /** Cloned-voice narration of the lesson. Absent if synthesis failed or hasn't run yet. */
+  audioUrl?: string;
 }
 
 export interface LessonSource {

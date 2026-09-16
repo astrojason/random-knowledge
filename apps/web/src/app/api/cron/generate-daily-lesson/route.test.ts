@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { defaultWeights } from "@/lib/categories";
 import { getDailyGenerationContextAdmin, listGrantedUserIds, saveDailyLessonAdmin } from "@/lib/firebase-admin";
+import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
 import type { Lesson } from "@/lib/types";
 
@@ -10,6 +11,7 @@ vi.mock("@/lib/firebase-admin", () => ({
   getDailyGenerationContextAdmin: vi.fn(),
   saveDailyLessonAdmin: vi.fn(),
 }));
+vi.mock("@/lib/lesson-audio", () => ({ attachLessonAudio: vi.fn() }));
 vi.mock("@/lib/lesson-generation", () => ({ generateSourcedLesson: vi.fn() }));
 vi.mock("openai", () => ({ default: class OpenAI {} }));
 
@@ -27,6 +29,7 @@ beforeEach(() => {
   vi.mocked(listGrantedUserIds).mockResolvedValue(["alice"]);
   vi.mocked(getDailyGenerationContextAdmin).mockResolvedValue(emptyContext);
   vi.mocked(generateSourcedLesson).mockResolvedValue(lesson);
+  vi.mocked(attachLessonAudio).mockImplementation(async (_path, l) => l);
 });
 
 it("rejects requests without the cron secret configured", async () => {
@@ -48,6 +51,18 @@ it("generates and saves a lesson for a granted user without one today", async ()
   const body = await response.json();
   expect(body.results).toEqual([{ uid: "alice", status: "generated" }]);
   expect(saveDailyLessonAdmin).toHaveBeenCalledWith("alice", body.date, { category: "nature", ...lesson }, []);
+});
+
+it("synthesizes narration for the generated lesson before saving it", async () => {
+  vi.mocked(attachLessonAudio).mockResolvedValue({ category: "nature", ...lesson, audioUrl: "https://storage.example/lesson.mp3" } as Lesson);
+  const response = await POST(request());
+  const body = await response.json();
+  expect(attachLessonAudio).toHaveBeenCalledWith(`lesson-audio/alice/${body.date}.mp3`, { category: "nature", ...lesson });
+  expect(saveDailyLessonAdmin).toHaveBeenCalledWith(
+    "alice", body.date,
+    { category: "nature", ...lesson, audioUrl: "https://storage.example/lesson.mp3" },
+    []
+  );
 });
 
 it("skips a user who already has today's lesson", async () => {

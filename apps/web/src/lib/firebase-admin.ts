@@ -1,10 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { getApps, initializeApp, cert, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import type { AccessRequest } from "@/lib/auth-guard";
 import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from "@/lib/categories";
 import { fromFirestoreLesson, toFirestoreLesson } from "@/lib/lesson-storage";
 import type { HistoryEntry, Lesson } from "@/lib/types";
+
+const STORAGE_BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
 function getAdminApp(): App {
   if (getApps().length) return getApps()[0];
@@ -61,6 +65,22 @@ export async function getDailyGenerationContextAdmin(uid: string, date: string):
     history: historySnap.exists ? (historySnap.data()?.entries as HistoryEntry[]) : [],
     selectedCategories: selected.length ? selected : CATEGORY_KEYS,
   };
+}
+
+/**
+ * Uploads narration audio to Cloud Storage at `path` and returns a stable download URL.
+ * Uses the same firebaseStorageDownloadTokens convention as the client SDK's getDownloadURL
+ * (rather than a V4 signed URL) since GCS caps signed URLs at 7 days.
+ */
+export async function uploadLessonAudioAdmin(path: string, audio: Uint8Array): Promise<string> {
+  const token = randomUUID();
+  const bucket = getStorage(getAdminApp()).bucket(STORAGE_BUCKET);
+  const file = bucket.file(path);
+  await file.save(Buffer.from(audio), {
+    contentType: "audio/mpeg",
+    metadata: { metadata: { firebaseStorageDownloadTokens: token } },
+  });
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
 }
 
 /** Saves a cron-generated lesson and appends it to history, mirroring setLesson + appendHistory from firestore.ts. */
