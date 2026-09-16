@@ -16,7 +16,8 @@ export default function AdminPage() {
   const { user, claims, loading } = useAuth();
   const [requests, setRequests] = useState<AccessRequest[] | null>(null);
   const [log, setLog] = useState<GenerationLogEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [logError, setLogError] = useState<string | null>(null);
 
   const superadmin = isSuperadmin(claims);
 
@@ -26,13 +27,13 @@ export default function AdminPage() {
       .then(setRequests)
       .catch((err) => {
         console.error("Failed to load access requests", err);
-        setError(err instanceof Error ? err.message : "Failed to load access requests");
+        setAccessError(err instanceof Error ? err.message : "Failed to load access requests");
       });
     listGenerationLog()
       .then(setLog)
       .catch((err) => {
         console.error("Failed to load the generation log", err);
-        setError(err instanceof Error ? err.message : "Failed to load the generation log");
+        setLogError(err instanceof Error ? err.message : "Failed to load the generation log");
       });
   }, [superadmin]);
 
@@ -54,7 +55,7 @@ export default function AdminPage() {
       );
     } catch (err) {
       console.error("Failed to grant access", err);
-      setError(err instanceof Error ? err.message : "Failed to grant access");
+      setAccessError(err instanceof Error ? err.message : "Failed to grant access");
     }
   };
 
@@ -66,7 +67,7 @@ export default function AdminPage() {
       );
     } catch (err) {
       console.error("Failed to revoke access", err);
-      setError(err instanceof Error ? err.message : "Failed to revoke access");
+      setAccessError(err instanceof Error ? err.message : "Failed to revoke access");
     }
   };
 
@@ -74,22 +75,24 @@ export default function AdminPage() {
     <div className="mx-auto w-full max-w-[640px] px-4 py-10">
       <Card>
         <h1 className="mb-5 font-heading text-xl font-bold text-fg-strong">Manage access</h1>
-        {error && <p className="mb-4 text-sm text-rust">{error}</p>}
         {requests === null ? (
-          <LoadingView text="Loading requests" />
+          accessError ? <p className="text-sm text-rust">{accessError}</p> : <LoadingView text="Loading requests" />
         ) : (
-          <AdminAccessList
-            requests={requestsForAdmin(requests, user.uid)}
-            onGrant={handleGrant}
-            onRevoke={handleRevoke}
-          />
+          <>
+            {accessError && <p className="mb-4 text-sm text-rust">{accessError}</p>}
+            <AdminAccessList
+              requests={requestsForAdmin(requests, user.uid)}
+              onGrant={handleGrant}
+              onRevoke={handleRevoke}
+            />
+          </>
         )}
       </Card>
       <div className="mt-6">
         <Card>
           <h2 className="mb-5 font-heading text-xl font-bold text-fg-strong">Generation log</h2>
           {log === null ? (
-            <LoadingView text="Loading generation log" />
+            logError ? <p className="text-sm text-rust">{logError}</p> : <LoadingView text="Loading generation log" />
           ) : (
             <GenerationLog entries={log} requests={requests ?? []} />
           )}
