@@ -6,13 +6,16 @@ import { LandingPage } from "@/components/LandingPage";
 import { LoadingView } from "@/components/lesson/LoadingView";
 import { Card } from "@/components/lesson/Card";
 import { AdminAccessList } from "@/components/admin/AdminAccessList";
+import { GenerationLog } from "@/components/admin/GenerationLog";
 import { useAuth } from "@/lib/auth-context";
 import { isSuperadmin, requestsForAdmin, type AccessRequest } from "@/lib/auth-guard";
-import { grantAccess, listAccessRequests, revokeAccess } from "@/lib/firestore";
+import { grantAccess, listAccessRequests, listGenerationLog, revokeAccess } from "@/lib/firestore";
+import type { GenerationLogEntry } from "@/lib/types";
 
 export default function AdminPage() {
   const { user, claims, loading } = useAuth();
   const [requests, setRequests] = useState<AccessRequest[] | null>(null);
+  const [log, setLog] = useState<GenerationLogEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const superadmin = isSuperadmin(claims);
@@ -24,6 +27,12 @@ export default function AdminPage() {
       .catch((err) => {
         console.error("Failed to load access requests", err);
         setError(err instanceof Error ? err.message : "Failed to load access requests");
+      });
+    listGenerationLog()
+      .then(setLog)
+      .catch((err) => {
+        console.error("Failed to load the generation log", err);
+        setError(err instanceof Error ? err.message : "Failed to load the generation log");
       });
   }, [superadmin]);
 
@@ -76,6 +85,16 @@ export default function AdminPage() {
           />
         )}
       </Card>
+      <div className="mt-6">
+        <Card>
+          <h2 className="mb-5 font-heading text-xl font-bold text-fg-strong">Generation log</h2>
+          {log === null ? (
+            <LoadingView text="Loading generation log" />
+          ) : (
+            <GenerationLog entries={log} requests={requests ?? []} />
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

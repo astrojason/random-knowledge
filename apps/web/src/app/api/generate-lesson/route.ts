@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { getAccessRequestAdmin, verifyIdToken } from "@/lib/firebase-admin";
+import { getAccessRequestAdmin, logGenerationAdmin, verifyIdToken } from "@/lib/firebase-admin";
 import { hasAppAccess, isSuperadmin, resolveAccess } from "@/lib/auth-guard";
 import { CATEGORIES, type CategoryKey } from "@/lib/categories";
 import { attachLessonAudio } from "@/lib/lesson-audio";
@@ -78,11 +78,10 @@ export async function POST(request: Request) {
       recentTitles,
       model: OPENAI_MODEL,
       researchModel: OPENAI_RESEARCH_MODEL,
-      onTokens: async (count) => {
-        await reportTokensUsed(count).catch((err) => console.error("Failed to report lesson tokens", err));
-      },
+      onTokens: reportTokensUsed,
     });
     const lesson = await attachLessonAudio(`lesson-audio/${uid}/${Date.now()}.mp3`, { category, ...generated });
+    await logGenerationAdmin(uid, lesson.title).catch((err) => console.error("Failed to log lesson generation", err));
     return NextResponse.json(lesson);
   } catch (err) {
     console.error("Source-backed lesson generation failed", err);

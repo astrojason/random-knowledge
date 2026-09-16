@@ -1,10 +1,10 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, runTransaction, setDoc, updateDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, runTransaction, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from "@/lib/categories";
 import type { AccessRequest } from "@/lib/auth-guard";
 import { todayStr } from "@/lib/date";
 import { fromFirestoreLesson, toFirestoreLesson } from "@/lib/lesson-storage";
-import type { DailyProgress, HistoryEntry, Lesson, StreakData } from "@/lib/types";
+import type { DailyProgress, GenerationLogEntry, HistoryEntry, Lesson, StreakData } from "@/lib/types";
 import { advanceStreak } from "@/lib/streak";
 
 const DEFAULT_STREAK: StreakData = { streak: 0, longest: 0, lastDate: null };
@@ -140,6 +140,12 @@ export async function revokeAccess(uid: string): Promise<void> {
     status: "revoked",
     revokedAt: todayStr(),
   });
+}
+
+/** Superadmin-only (enforced by firestore.rules). Most recent generations first. */
+export async function listGenerationLog(max = 50): Promise<GenerationLogEntry[]> {
+  const snap = await getDocs(query(collection(db, "generationLog"), orderBy("createdAt", "desc"), limit(max)));
+  return snap.docs.map((d) => d.data() as GenerationLogEntry);
 }
 
 /** Deletes every document under users/{uid} — streak, weights, history, lessons, progress. */

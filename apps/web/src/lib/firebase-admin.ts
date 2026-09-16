@@ -6,7 +6,7 @@ import { getStorage } from "firebase-admin/storage";
 import type { AccessRequest } from "@/lib/auth-guard";
 import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from "@/lib/categories";
 import { fromFirestoreLesson, toFirestoreLesson } from "@/lib/lesson-storage";
-import type { HistoryEntry, Lesson } from "@/lib/types";
+import type { GenerationLogEntry, HistoryEntry, Lesson } from "@/lib/types";
 
 const STORAGE_BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
@@ -81,6 +81,12 @@ export async function uploadLessonAudioAdmin(path: string, audio: Uint8Array): P
     metadata: { metadata: { firebaseStorageDownloadTokens: token } },
   });
   return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
+}
+
+/** Records a generation event for the admin-visible generation log (see GenerationLog). */
+export async function logGenerationAdmin(uid: string, title: string): Promise<void> {
+  const entry: GenerationLogEntry = { uid, title, createdAt: new Date().toISOString() };
+  await getFirestore(getAdminApp()).collection("generationLog").add(entry);
 }
 
 /** Saves a cron-generated lesson and appends it to history, mirroring setLesson + appendHistory from firestore.ts. */

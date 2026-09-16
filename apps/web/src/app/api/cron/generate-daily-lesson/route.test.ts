@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { defaultWeights } from "@/lib/categories";
-import { getDailyGenerationContextAdmin, listGrantedUserIds, saveDailyLessonAdmin } from "@/lib/firebase-admin";
+import { getDailyGenerationContextAdmin, listGrantedUserIds, logGenerationAdmin, saveDailyLessonAdmin } from "@/lib/firebase-admin";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
 import type { Lesson } from "@/lib/types";
@@ -10,6 +10,7 @@ vi.mock("@/lib/firebase-admin", () => ({
   listGrantedUserIds: vi.fn(),
   getDailyGenerationContextAdmin: vi.fn(),
   saveDailyLessonAdmin: vi.fn(),
+  logGenerationAdmin: vi.fn(),
 }));
 vi.mock("@/lib/lesson-audio", () => ({ attachLessonAudio: vi.fn() }));
 vi.mock("@/lib/lesson-generation", () => ({ generateSourcedLesson: vi.fn() }));
@@ -30,6 +31,7 @@ beforeEach(() => {
   vi.mocked(getDailyGenerationContextAdmin).mockResolvedValue(emptyContext);
   vi.mocked(generateSourcedLesson).mockResolvedValue(lesson);
   vi.mocked(attachLessonAudio).mockImplementation(async (_path, l) => l);
+  vi.mocked(logGenerationAdmin).mockResolvedValue(undefined);
 });
 
 it("rejects requests without the cron secret configured", async () => {
@@ -51,6 +53,22 @@ it("generates and saves a lesson for a granted user without one today", async ()
   const body = await response.json();
   expect(body.results).toEqual([{ uid: "alice", status: "generated" }]);
   expect(saveDailyLessonAdmin).toHaveBeenCalledWith("alice", body.date, { category: "nature", ...lesson }, []);
+});
+
+it("logs the generation for admins after saving it", async () => {
+  const response = await POST(request());
+  const body = await response.json();
+  expect(body.results).toEqual([{ uid: "alice", status: "generated" }]);
+  expect(logGenerationAdmin).toHaveBeenCalledWith("alice", "Verified lesson");
+});
+
+it("still reports the lesson as generated when logging fails", async () => {
+  vi.mocked(logGenerationAdmin).mockRejectedValue(new Error("firestore unavailable"));
+  const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  const response = await POST(request());
+  const body = await response.json();
+  expect(body.results).toEqual([{ uid: "alice", status: "generated" }]);
+  expect(errorSpy).toHaveBeenCalled();
 });
 
 it("synthesizes narration for the generated lesson before saving it", async () => {

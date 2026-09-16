@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { pickCategory } from "@/lib/categories";
 import { todayStr } from "@/lib/date";
-import { getDailyGenerationContextAdmin, listGrantedUserIds, saveDailyLessonAdmin } from "@/lib/firebase-admin";
+import { getDailyGenerationContextAdmin, listGrantedUserIds, logGenerationAdmin, saveDailyLessonAdmin } from "@/lib/firebase-admin";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
 import { DAILY_TOKEN_LIMIT, getTokensUsedToday, reportTokensUsed } from "@/lib/token-budget";
@@ -96,9 +96,7 @@ export async function POST(request: Request) {
           recentTitles,
           model: OPENAI_MODEL,
           researchModel: OPENAI_RESEARCH_MODEL,
-          onTokens: async (count) => {
-            await reportTokensUsed(count).catch((err) => console.error("Failed to report cron lesson tokens", err));
-          },
+          onTokens: reportTokensUsed,
         });
         generated = { category, ...lesson };
         break;
@@ -111,6 +109,7 @@ export async function POST(request: Request) {
     if (generated) {
       generated = await attachLessonAudio(`lesson-audio/${uid}/${date}.mp3`, generated);
       await saveDailyLessonAdmin(uid, date, generated, context.history);
+      await logGenerationAdmin(uid, generated.title).catch((err) => console.error(`Failed to log lesson generation for ${uid}`, err));
       results.push({ uid, status: "generated" });
     } else if (!stoppedForTokenLimit) {
       results.push({ uid, status: "failed", error: lastError instanceof Error ? lastError.message : "Unknown error" });

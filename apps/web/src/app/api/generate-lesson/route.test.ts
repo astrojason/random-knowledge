@@ -1,10 +1,10 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { POST } from "./route";
-import { getAccessRequestAdmin, verifyIdToken } from "@/lib/firebase-admin";
+import { getAccessRequestAdmin, logGenerationAdmin, verifyIdToken } from "@/lib/firebase-admin";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
 
-vi.mock("@/lib/firebase-admin", () => ({ getAccessRequestAdmin: vi.fn(), verifyIdToken: vi.fn() }));
+vi.mock("@/lib/firebase-admin", () => ({ getAccessRequestAdmin: vi.fn(), verifyIdToken: vi.fn(), logGenerationAdmin: vi.fn() }));
 vi.mock("@/lib/lesson-audio", () => ({ attachLessonAudio: vi.fn() }));
 vi.mock("@/lib/lesson-generation", () => ({ generateSourcedLesson: vi.fn() }));
 vi.mock("openai", () => ({ default: class OpenAI {} }));
@@ -19,6 +19,7 @@ beforeEach(() => {
   vi.mocked(verifyIdToken).mockResolvedValue({ uid: "reader", superadmin: true } as unknown as Awaited<ReturnType<typeof verifyIdToken>>);
   vi.mocked(generateSourcedLesson).mockResolvedValue({ title: "Verified lesson" } as Awaited<ReturnType<typeof generateSourcedLesson>>);
   vi.mocked(attachLessonAudio).mockImplementation(async (_path, l) => l);
+  vi.mocked(logGenerationAdmin).mockResolvedValue(undefined);
 });
 
 it.each(["", "Basic token", "Bearer "])("rejects missing bearer tokens (%s)", async (header) => {
@@ -64,6 +65,20 @@ it("synthesizes narration for the generated lesson before responding", async () 
     { category: "nature", title: "Verified lesson" }
   );
   expect(await response.json()).toEqual({ category: "nature", title: "Verified lesson", audioUrl: "https://storage.example/lesson.mp3" });
+});
+
+it("logs the generation for admins before responding", async () => {
+  await POST(request());
+  expect(logGenerationAdmin).toHaveBeenCalledWith("reader", "Verified lesson");
+});
+
+it("still returns the lesson when logging fails", async () => {
+  vi.mocked(logGenerationAdmin).mockRejectedValue(new Error("firestore unavailable"));
+  const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  const response = await POST(request());
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ category: "nature", title: "Verified lesson" });
+  expect(errorSpy).toHaveBeenCalled();
 });
 
 it("returns a generation failure without a lesson", async () => {

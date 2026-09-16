@@ -23,5 +23,10 @@ service cloud.firestore {
         && request.resource.data.status == resource.data.status
         && request.resource.data.uid == uid;
     }
+
+    match /generationLog/{id} {
+      // Written only by the admin SDK (bypasses rules) from the cron and generate-lesson routes.
+      allow read: if request.auth != null && request.auth.token.superadmin == true;
+    }
   }
 }

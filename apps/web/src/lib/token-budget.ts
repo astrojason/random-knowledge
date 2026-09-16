@@ -9,9 +9,10 @@ export async function getTokensUsedToday(): Promise<number> {
 }
 
 export async function reportTokensUsed(count: number): Promise<void> {
-  await fetch(TOKEN_TRACKER, {
+  const res = await fetch(TOKEN_TRACKER, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tokens: count }),
   });
+  if (!res.ok) throw new Error(`Token tracker rejected the report (${res.status} ${res.statusText})`);
 }

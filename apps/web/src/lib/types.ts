@@ -49,3 +49,10 @@ export interface DailyProgress {
   /** Selected option index per question, in question order. Absent on progress saved before this field existed. */
   answers?: number[];
 }
+
+/** One row in the admin-visible log of lesson generations (src/lib/firebase-admin.ts's logGenerationAdmin). */
+export interface GenerationLogEntry {
+  uid: string;
+  title: string;
+  createdAt: string;
+}
