@@ -28,5 +28,10 @@ service cloud.firestore {
       // Written only by the admin SDK (bypasses rules) from the cron and generate-lesson routes.
       allow read: if request.auth != null && request.auth.token.superadmin == true;
     }
+
+    match /cronRunLog/{id} {
+      // Written only by the admin SDK (bypasses rules) from the daily-lesson cron route.
+      allow read: if request.auth != null && request.auth.token.superadmin == true;
+    }
   }
 }

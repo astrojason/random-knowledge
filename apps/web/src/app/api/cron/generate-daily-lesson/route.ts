@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { pickCategory } from "@/lib/categories";
 import { todayStr } from "@/lib/date";
-import { getDailyGenerationContextAdmin, listGrantedUserIds, logGenerationAdmin, saveDailyLessonAdmin } from "@/lib/firebase-admin";
+import { getDailyGenerationContextAdmin, listGrantedUserIds, logCronRunAdmin, logGenerationAdmin, saveDailyLessonAdmin } from "@/lib/firebase-admin";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
 import { DAILY_TOKEN_LIMIT, getTokensUsedToday, reportTokensUsed } from "@/lib/token-budget";
-import type { Lesson } from "@/lib/types";
+import type { CronRunResult, Lesson } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -39,12 +39,6 @@ async function tokenLimitReached(): Promise<boolean> {
   return used >= DAILY_TOKEN_LIMIT;
 }
 
-interface UserResult {
-  uid: string;
-  status: "generated" | "already-had-lesson" | "failed";
-  error?: string;
-}
-
 /**
  * Pre-generates today's lesson for every user with granted access, so it's
  * ready before they open the app. Retries a user's generation (the research
@@ -64,7 +58,7 @@ export async function POST(request: Request) {
 
   const date = todayStr("UTC");
   const uids = await listGrantedUserIds();
-  const results: UserResult[] = [];
+  const results: CronRunResult[] = [];
   let stoppedForTokenLimit = false;
 
   for (const uid of uids) {
@@ -115,6 +109,8 @@ export async function POST(request: Request) {
       results.push({ uid, status: "failed", error: lastError instanceof Error ? lastError.message : "Unknown error" });
     }
   }
+
+  await logCronRunAdmin(date, stoppedForTokenLimit, results).catch((err) => console.error("Failed to log the cron run", err));
 
   return NextResponse.json({ date, stoppedForTokenLimit, results });
 }

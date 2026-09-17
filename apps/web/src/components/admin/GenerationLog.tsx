@@ -2,11 +2,7 @@
 
 import type { AccessRequest } from "@/lib/auth-guard";
 import type { GenerationLogEntry } from "@/lib/types";
-
-function labelFor(uid: string, requests: AccessRequest[]): string {
-  const req = requests.find((r) => r.uid === uid);
-  return req?.displayName ?? req?.email ?? uid;
-}
+import { labelFor } from "./labelFor";
 
 export function GenerationLog({ entries, requests }: { entries: GenerationLogEntry[]; requests: AccessRequest[] }) {
   if (entries.length === 0) {

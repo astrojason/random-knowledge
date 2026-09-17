@@ -6,7 +6,7 @@ import { getStorage } from "firebase-admin/storage";
 import type { AccessRequest } from "@/lib/auth-guard";
 import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from "@/lib/categories";
 import { fromFirestoreLesson, toFirestoreLesson } from "@/lib/lesson-storage";
-import type { GenerationLogEntry, HistoryEntry, Lesson } from "@/lib/types";
+import type { CronRunLogEntry, CronRunResult, GenerationLogEntry, HistoryEntry, Lesson } from "@/lib/types";
 
 const STORAGE_BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
@@ -87,6 +87,12 @@ export async function uploadLessonAudioAdmin(path: string, audio: Uint8Array): P
 export async function logGenerationAdmin(uid: string, title: string): Promise<void> {
   const entry: GenerationLogEntry = { uid, title, createdAt: new Date().toISOString() };
   await getFirestore(getAdminApp()).collection("generationLog").add(entry);
+}
+
+/** Records a full daily-lesson cron run, including per-user failures, for the admin-visible run log (see CronRunLog). */
+export async function logCronRunAdmin(date: string, stoppedForTokenLimit: boolean, results: CronRunResult[]): Promise<void> {
+  const entry: CronRunLogEntry = { date, stoppedForTokenLimit, results, createdAt: new Date().toISOString() };
+  await getFirestore(getAdminApp()).collection("cronRunLog").add(entry);
 }
 
 /** Saves a cron-generated lesson and appends it to history, mirroring setLesson + appendHistory from firestore.ts. */

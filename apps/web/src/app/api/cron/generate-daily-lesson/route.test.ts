@@ -1,7 +1,13 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { defaultWeights } from "@/lib/categories";
-import { getDailyGenerationContextAdmin, listGrantedUserIds, logGenerationAdmin, saveDailyLessonAdmin } from "@/lib/firebase-admin";
+import {
+  getDailyGenerationContextAdmin,
+  listGrantedUserIds,
+  logCronRunAdmin,
+  logGenerationAdmin,
+  saveDailyLessonAdmin,
+} from "@/lib/firebase-admin";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
 import type { Lesson } from "@/lib/types";
@@ -11,6 +17,7 @@ vi.mock("@/lib/firebase-admin", () => ({
   getDailyGenerationContextAdmin: vi.fn(),
   saveDailyLessonAdmin: vi.fn(),
   logGenerationAdmin: vi.fn(),
+  logCronRunAdmin: vi.fn(),
 }));
 vi.mock("@/lib/lesson-audio", () => ({ attachLessonAudio: vi.fn() }));
 vi.mock("@/lib/lesson-generation", () => ({ generateSourcedLesson: vi.fn() }));
@@ -32,6 +39,7 @@ beforeEach(() => {
   vi.mocked(generateSourcedLesson).mockResolvedValue(lesson);
   vi.mocked(attachLessonAudio).mockImplementation(async (_path, l) => l);
   vi.mocked(logGenerationAdmin).mockResolvedValue(undefined);
+  vi.mocked(logCronRunAdmin).mockResolvedValue(undefined);
 });
 
 it("rejects requests without the cron secret configured", async () => {
@@ -126,4 +134,22 @@ it("stops mid-retry once the token limit is hit and does not mark the user faile
   const body = await response.json();
   expect(body.stoppedForTokenLimit).toBe(true);
   expect(body.results).toEqual([]);
+});
+
+it("logs the full run, including a failed user, for admins", async () => {
+  vi.mocked(generateSourcedLesson).mockRejectedValue(new Error("rejected draft"));
+  const response = await POST(request());
+  const body = await response.json();
+  expect(logCronRunAdmin).toHaveBeenCalledWith(body.date, false, [
+    { uid: "alice", status: "failed", error: "rejected draft" },
+  ]);
+});
+
+it("still returns the run results when logging the run fails", async () => {
+  vi.mocked(logCronRunAdmin).mockRejectedValue(new Error("firestore unavailable"));
+  const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  const response = await POST(request());
+  const body = await response.json();
+  expect(body.results).toEqual([{ uid: "alice", status: "generated" }]);
+  expect(errorSpy).toHaveBeenCalled();
 });

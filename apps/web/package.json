@@ -1,6 +1,6 @@
 {
   "name": "web",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,7 @@
     "grant-superadmin": "node --env-file=.env.local scripts/grant-superadmin.mjs"
   },
   "dependencies": {
+    "@random-knowledge/shared": "*",
     "firebase": "^12.18.0",
     "firebase-admin": "^14.3.0",
     "next": "16.3.4",

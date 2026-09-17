@@ -1,11 +1,16 @@
 {
   "name": "random-knowledge.astrojason.com",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "npm --prefix apps/web run dev",
     "build": "npm --prefix apps/web run build",
     "lint": "npm --prefix apps/web run lint",
-    "test": "npm --prefix apps/web run test"
+    "test": "npm --prefix apps/web run test",
+    "mobile": "npm --prefix apps/mobile run start"
   }
 }
