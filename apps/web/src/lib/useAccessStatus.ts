@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import { getAccessRequest, recordAccessRequest } from "@/lib/firestore";
 import { isSuperadmin, resolveAccess, type AuthClaims, type ResolvedAccess } from "@/lib/auth-guard";
@@ -8,8 +8,15 @@ import { isSuperadmin, resolveAccess, type AuthClaims, type ResolvedAccess } fro
 export function useAccessStatus(user: User | null, claims: AuthClaims | null) {
   const [status, setStatus] = useState<ResolvedAccess | null>(null);
   const [loading, setLoading] = useState(true);
+  // `user` and `claims` land in separate renders (see auth-context.tsx),
+  // so this can be invoked again — with the real claims — before an
+  // earlier claims=null resolution's Firestore round trip finishes. This
+  // token makes a superseded resolution a no-op instead of letting it
+  // overwrite a newer, already-applied result.
+  const latestRequest = useRef(0);
 
   const resolve = useCallback(async () => {
+    const requestId = ++latestRequest.current;
     if (!user) {
       setStatus(null);
       setLoading(false);
@@ -25,12 +32,14 @@ export function useAccessStatus(user: User | null, claims: AuthClaims | null) {
     try {
       await recordAccessRequest(user);
       const req = await getAccessRequest(user.uid);
+      if (requestId !== latestRequest.current) return;
       setStatus(resolveAccess(user.uid, claims, req));
     } catch (err) {
+      if (requestId !== latestRequest.current) return;
       console.error("Failed to resolve access status", err);
       setStatus("denied");
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   }, [user, claims]);
 
