@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Runs the mobile app's iOS dev build. Must run from apps/mobile, not the repo
+# root — running `expo run:ios` at the root scaffolds a throwaway app.json/ios
+# project there instead of using apps/mobile's real config (Firebase, bundle
+# id, etc), and the resulting build has no matching Metro project to talk to.
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MOBILE_DIR="$REPO_ROOT/apps/mobile"
+
+cd "$MOBILE_DIR"
+
+echo "==> Running iOS dev build from $MOBILE_DIR"
+npx expo run:ios "$@"
