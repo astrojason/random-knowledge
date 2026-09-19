@@ -28,6 +28,12 @@
     "plugins": [
       "@react-native-google-signin/google-signin",
       "expo-dev-client"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e7edc8f8-0478-4d22-b6c6-8d3cac66fb9e"
+      }
+    },
+    "owner": "astrojason"
   }
 }
