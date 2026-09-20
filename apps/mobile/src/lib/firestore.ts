@@ -19,5 +19,6 @@ export const {
   grantAccess,
   revokeAccess,
   listGenerationLog,
+  createShare,
   resetAllUserData,
 } = createFirestoreApi(db);

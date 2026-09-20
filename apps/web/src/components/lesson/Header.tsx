@@ -1,3 +1,4 @@
+import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 import { AdminLink } from "@/components/AdminLink";
 import { StreakStatus } from "@/components/lesson/StreakStatus";
@@ -25,6 +26,12 @@ export function Header({
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-[13px] text-fg-muted">{formatDateLabel(date)}</span>
         <div className="flex items-center gap-3">
+          <Link
+            href="/library"
+            className="text-xs font-medium text-fg-muted underline decoration-border decoration-1 underline-offset-2 hover:text-accent"
+          >
+            Library
+          </Link>
           {showAdminLink && <AdminLink />}
           <ThemeToggle />
           <button

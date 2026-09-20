@@ -99,17 +99,18 @@ export function DailyLessonScreen() {
 }
 
 function LessonPhase({ state }: { state: ReturnType<typeof useDailyLesson> }) {
-  const { phase, lesson, progress, quiz, errorMessage, actions } = state;
+  const { phase, date, lesson, progress, quiz, errorMessage, actions } = state;
   if (phase === "loading") return <LoadingView text="Setting things up" />;
   if (phase === "generating") return <LoadingView text="Researching and checking today’s lesson" />;
   if (phase === "error") return <ErrorView message={errorMessage ?? "Unknown error"} onRetry={actions.retry} />;
   if (!lesson) return null;
-  if (phase === "lesson") return <LessonView lesson={lesson} onStartQuiz={actions.startQuiz} />;
+  if (phase === "lesson") return <LessonView lesson={lesson} date={date} onStartQuiz={actions.startQuiz} />;
   if (phase === "quiz") return <QuizView lesson={lesson} quiz={quiz} onSelect={actions.selectOption} onNext={actions.nextQuestion} />;
   if (phase !== "done" || !progress) return null;
   return (
     <DoneView
       lesson={lesson}
+      date={date}
       progress={progress}
       onMore={() => actions.adjustWeight(lesson.category, 4)}
       onLess={() => actions.adjustWeight(lesson.category, -4)}

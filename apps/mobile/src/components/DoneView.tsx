@@ -6,15 +6,18 @@ import { useTheme } from "../lib/theme";
 import { DeepLinks } from "./DeepLinks";
 import { LessonBody } from "./LessonBody";
 import { QuizReview } from "./QuizReview";
+import { ShareLessonButton } from "./ShareLessonButton";
 import { Button } from "./ui";
 
 export function DoneView({
   lesson,
+  date,
   progress,
   onMore,
   onLess,
 }: {
   lesson: Lesson;
+  date: string;
   progress: DailyProgress;
   onMore: () => void;
   onLess: () => void;
@@ -38,6 +41,7 @@ export function DoneView({
           Today&apos;s topic: {CATEGORIES[lesson.category]}. Come back tomorrow for the next one.
         </Text>
         <DeepLinks lesson={lesson} />
+        <ShareLessonButton lesson={lesson} date={date} />
         <Text style={{ color: theme.fgMuted, fontSize: 13, marginBottom: 10 }}>Want more like this, or less?</Text>
         <View style={styles.row}>
           <Button

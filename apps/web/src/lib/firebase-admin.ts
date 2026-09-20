@@ -6,7 +6,7 @@ import { getStorage } from "firebase-admin/storage";
 import type { AccessRequest } from "@/lib/auth-guard";
 import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from "@/lib/categories";
 import { fromFirestoreLesson, toFirestoreLesson } from "@/lib/lesson-storage";
-import type { CronRunLogEntry, CronRunResult, GenerationLogEntry, HistoryEntry, Lesson } from "@/lib/types";
+import type { CronRunLogEntry, CronRunResult, GenerationLogEntry, HistoryEntry, Lesson, SharePreview } from "@/lib/types";
 
 const STORAGE_BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
@@ -109,4 +109,12 @@ export async function saveDailyLessonAdmin(
     userRef.collection("lessons").doc(date).set(toFirestoreLesson(lesson)),
     userRef.collection("meta").doc("history").set({ entries: nextHistory }),
   ]);
+}
+
+/** Title/category/sender of a share, for the invite shown to visitors who can't read the lesson itself. */
+export async function getSharePreviewAdmin(id: string): Promise<SharePreview | null> {
+  const snap = await getFirestore(getAdminApp()).collection("shares").doc(id).get();
+  if (!snap.exists) return null;
+  const { title, category, ownerName } = snap.data() as SharePreview;
+  return { title, category, ownerName: ownerName ?? null };
 }

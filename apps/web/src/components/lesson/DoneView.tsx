@@ -4,16 +4,19 @@ import { useState } from "react";
 import { DeepLinks } from "@/components/lesson/DeepLinks";
 import { LessonBody } from "@/components/lesson/LessonBody";
 import { QuizReview } from "@/components/lesson/QuizReview";
+import { ShareLessonButton } from "@/components/share/ShareButton";
 import { CATEGORIES } from "@/lib/categories";
 import type { DailyProgress, Lesson } from "@/lib/types";
 
 export function DoneView({
   lesson,
+  date,
   progress,
   onMore,
   onLess,
 }: {
   lesson: Lesson;
+  date: string;
   progress: DailyProgress;
   onMore: () => void;
   onLess: () => void;
@@ -38,6 +41,7 @@ export function DoneView({
         <div className="flex justify-center">
           <DeepLinks lesson={lesson} />
         </div>
+        <div className="mb-5"><ShareLessonButton lesson={lesson} date={date} /></div>
         <p className="mb-3 text-[13.5px] text-fg-muted">Want more like this, or less?</p>
         <div className="flex justify-center gap-2.5">
           <button

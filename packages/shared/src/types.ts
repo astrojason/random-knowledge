@@ -71,3 +71,30 @@ export interface CronRunLogEntry {
   stoppedForTokenLimit: boolean;
   results: CronRunResult[];
 }
+
+/** A public-by-link snapshot of one lesson, stored at shares/{id} so friends can read it without access to the owner's account. */
+export interface SharedLesson {
+  id: string;
+  ownerName: string | null;
+  title: string;
+  category: CategoryKey;
+  createdAt: string;
+  lesson: Lesson;
+}
+
+/** What a signed-out or not-yet-approved visitor may see of a share: enough to make the invite interesting. */
+export interface SharePreview {
+  title: string;
+  category: CategoryKey;
+  ownerName: string | null;
+}
+
+/** A shared lesson a reader saved into their own account at users/{uid}/stash/{shareId}. */
+export interface StashEntry {
+  id: string;
+  savedAt: string;
+  sharedBy: string | null;
+  title: string;
+  category: CategoryKey;
+  lesson: Lesson;
+}

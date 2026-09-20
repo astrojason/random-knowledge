@@ -1,6 +1,6 @@
 {
   "name": "@random-knowledge/shared",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -12,6 +12,7 @@
     "./date": "./src/date.ts",
     "./auth-guard": "./src/auth-guard.ts",
     "./lesson-storage": "./src/lesson-storage.ts",
+    "./share": "./src/share.ts",
     "./firestore": "./src/firestore.ts"
   },
   "peerDependencies": {

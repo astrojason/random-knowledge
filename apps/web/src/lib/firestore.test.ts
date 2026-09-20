@@ -12,8 +12,8 @@ vi.mock("firebase/firestore", () => ({
   runTransaction: vi.fn(),
 }));
 
-import { getDoc, runTransaction, setDoc } from "firebase/firestore";
-import { completeDailyLesson, getLesson, getSelectedCategories, setLesson, setSelectedCategories } from "./firestore";
+import { deleteDoc, doc, getDoc, getDocs, runTransaction, setDoc } from "firebase/firestore";
+import { addToStash, completeDailyLesson, createShare, getLesson, getShare, getStash, removeFromStash, getSelectedCategories, setLesson, setSelectedCategories } from "./firestore";
 import type { Lesson } from "./types";
 
 /** Firestore's setDoc() rejects any value where an array directly contains another array. */
@@ -123,5 +123,84 @@ describe("streak completion transaction", () => {
   it("rejects an unfinished quiz before opening a transaction", async () => {
     await expect(completeDailyLesson("user-a", "2026-01-03", { ...progress, done: false })).rejects.toThrow("Finish the quiz");
     expect(runTransaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("sharing lessons", () => {
+  const lesson: Lesson = {
+    category: "physics",
+    title: "Newton's laws",
+    body: ["p1"],
+    wikiQuery: "q",
+    youtubeQuery: "q",
+    quiz: [],
+    paragraphSources: [[1, 2]],
+  };
+  const exists = (data: unknown) => ({ exists: () => true, data: () => data }) as unknown as Awaited<ReturnType<typeof getDoc>>;
+  const missing = { exists: () => false } as unknown as Awaited<ReturnType<typeof getDoc>>;
+
+  beforeEach(() => {
+    // doc(collectionRef) with no path parts is Firestore's auto-id form.
+    vi.mocked(doc).mockImplementation(((...args: unknown[]) => (args.length === 1 ? { id: "new-share" } : args.slice(1).join("/"))) as never);
+  });
+
+  it("creates a share snapshot once per lesson date and remembers its id", async () => {
+    vi.mocked(getDoc).mockResolvedValue(missing);
+    const id = await createShare({ uid: "user-a", displayName: "Ada" }, "2026-09-20", lesson);
+    expect(id).toBe("new-share");
+    expect(setDoc).toHaveBeenCalledWith("shares/new-share", expect.objectContaining({
+      ownerUid: "user-a",
+      ownerName: "Ada",
+      date: "2026-09-20",
+      title: "Newton's laws",
+      category: "physics",
+      lesson: expect.objectContaining({ paragraphSources: [{ refs: [1, 2] }] }),
+    }));
+    expect(setDoc).toHaveBeenCalledWith("users/user-a/shares/2026-09-20", { shareId: "new-share" });
+  });
+
+  it("reuses the existing share instead of creating another", async () => {
+    vi.mocked(getDoc).mockResolvedValue(exists({ shareId: "old-share" }));
+    expect(await createShare({ uid: "user-a", displayName: "Ada" }, "2026-09-20", lesson)).toBe("old-share");
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it("loads a share with its lesson decoded", async () => {
+    vi.mocked(getDoc).mockResolvedValue(exists({
+      ownerName: "Ada", title: "Newton's laws", category: "physics", createdAt: "2026-09-20",
+      lesson: { ...lesson, paragraphSources: [{ refs: [1, 2] }] },
+    }));
+    const share = await getShare("abc");
+    expect(getDoc).toHaveBeenCalledWith("shares/abc");
+    expect(share).toMatchObject({ id: "abc", ownerName: "Ada", lesson: { paragraphSources: [[1, 2]] } });
+  });
+
+  it("returns null for a share that does not exist", async () => {
+    vi.mocked(getDoc).mockResolvedValue(missing);
+    expect(await getShare("nope")).toBeNull();
+  });
+
+  it("stashes a copy of a share under the reader's account", async () => {
+    await addToStash("user-b", { id: "abc", ownerName: "Ada", title: "Newton's laws", category: "physics", createdAt: "2026-09-20", lesson });
+    expect(setDoc).toHaveBeenCalledWith("users/user-b/stash/abc", expect.objectContaining({
+      sharedBy: "Ada",
+      title: "Newton's laws",
+      lesson: expect.objectContaining({ paragraphSources: [{ refs: [1, 2] }] }),
+    }));
+  });
+
+  it("lists the stash newest first", async () => {
+    vi.mocked(getDocs).mockResolvedValue({
+      docs: [
+        { id: "a", data: () => ({ savedAt: "2026-09-01", sharedBy: null, title: "A", category: "physics", lesson }) },
+        { id: "b", data: () => ({ savedAt: "2026-09-10", sharedBy: "Ada", title: "B", category: "physics", lesson }) },
+      ],
+    } as unknown as Awaited<ReturnType<typeof getDocs>>);
+    expect((await getStash("user-b")).map((entry) => entry.id)).toEqual(["b", "a"]);
+  });
+
+  it("removes a stashed lesson", async () => {
+    await removeFromStash("user-b", "abc");
+    expect(deleteDoc).toHaveBeenCalledWith("users/user-b/stash/abc");
   });
 });

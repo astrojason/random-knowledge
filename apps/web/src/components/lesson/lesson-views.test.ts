@@ -10,6 +10,7 @@ import { useDailyLesson } from "@/lib/useDailyLesson";
 import type { Lesson } from "@/lib/types";
 
 vi.mock("@/lib/useDailyLesson", () => ({ useDailyLesson: vi.fn() }));
+vi.mock("@/lib/firestore", () => ({ createShare: vi.fn() }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null, claims: null, signOut: vi.fn() }) }));
 
 const lesson: Lesson = {

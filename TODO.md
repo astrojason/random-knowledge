@@ -2,6 +2,7 @@
 
 ## Follow-up
 
+- [ ] Sharing follow-ups for apps/mobile: open `/share/<id>` links in-app (universal links + associated domains), add a stash and past-lessons library screen (web has `/library`, `/lesson/[date]`, `/stash/[id]`, `/share/[id]`); for now the mobile Share button only shares the web link
 - [ ] Create the ElevenLabs voice clone and set `ELEVENLABS_API_KEY`/`ELEVENLABS_VOICE_ID` locally and in production so `ReadAloudButton` uses it instead of falling back to the browser voice
 - [ ] Decide on `@types/react` in apps/mobile: pinned to exact `19.2.4` because `19.2.18` broke all React Native JSX typing (`'View' cannot be used as a JSX component`, TS2786) with `react-native@0.86.3` + `typescript@6.0.3`; re-test with newer patches before loosening the pin
 - [ ] Add cloned-voice narration (ReadAloudButton) and the superadmin admin screen to apps/mobile — skipped for MVP, web-only for now

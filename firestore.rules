@@ -24,6 +24,22 @@ service cloud.firestore {
         && request.resource.data.uid == uid;
     }
 
+    function hasAppAccess() {
+      return request.auth != null && (
+        request.auth.token.superadmin == true
+        || (exists(/databases/$(database)/documents/accessRequests/$(request.auth.uid))
+            && get(/databases/$(database)/documents/accessRequests/$(request.auth.uid)).data.status == "granted")
+      );
+    }
+
+    // Snapshots of lessons shared by link. Readable by anyone with app access; signed-out
+    // visitors only ever see the title/category preview served by /api/share/[id].
+    match /shares/{id} {
+      allow get: if hasAppAccess();
+      allow create: if hasAppAccess() && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
+
     match /generationLog/{id} {
       // Written only by the admin SDK (bypasses rules) from the cron and generate-lesson routes.
       allow read: if request.auth != null && request.auth.token.superadmin == true;

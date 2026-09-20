@@ -4,7 +4,7 @@ import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from ".
 import type { AccessRequest } from "./auth-guard";
 import { todayStr } from "./date";
 import { fromFirestoreLesson, toFirestoreLesson } from "./lesson-storage";
-import type { CronRunLogEntry, DailyProgress, GenerationLogEntry, HistoryEntry, Lesson, StreakData } from "./types";
+import type { CronRunLogEntry, DailyProgress, GenerationLogEntry, HistoryEntry, Lesson, SharedLesson, StashEntry, StreakData } from "./types";
 import { advanceStreak } from "./streak";
 
 const DEFAULT_STREAK: StreakData = { streak: 0, longest: 0, lastDate: null };
@@ -160,17 +160,91 @@ export function createFirestoreApi(db: Firestore) {
     return snap.docs.map((d) => d.data() as CronRunLogEntry);
   }
 
-  /** Deletes every document under users/{uid} — streak, weights, history, lessons, progress. */
+  /** Snapshots a lesson to shares/{id} (once per lesson date) and returns the id used in its share link. */
+  async function createShare(
+    owner: { uid: string; displayName: string | null },
+    date: string,
+    lesson: Lesson
+  ): Promise<string> {
+    const pointerRef = doc(db, "users", owner.uid, "shares", date);
+    const pointer = await getDoc(pointerRef);
+    if (pointer.exists()) return pointer.data().shareId as string;
+
+    const shareRef = doc(collection(db, "shares"));
+    await setDoc(doc(db, "shares", shareRef.id), {
+      ownerUid: owner.uid,
+      ownerName: owner.displayName,
+      date,
+      title: lesson.title,
+      category: lesson.category,
+      createdAt: new Date().toISOString(),
+      lesson: toFirestoreLesson(lesson),
+    });
+    await setDoc(pointerRef, { shareId: shareRef.id });
+    return shareRef.id;
+  }
+
+  /** Readable only by accounts with app access (enforced by firestore.rules). */
+  async function getShare(id: string): Promise<SharedLesson | null> {
+    const snap = await getDoc(doc(db, "shares", id));
+    if (!snap.exists()) return null;
+    const data = snap.data() as Omit<SharedLesson, "id" | "lesson"> & { lesson: Parameters<typeof fromFirestoreLesson>[0] };
+    return {
+      id,
+      ownerName: data.ownerName,
+      title: data.title,
+      category: data.category,
+      createdAt: data.createdAt,
+      lesson: fromFirestoreLesson(data.lesson),
+    };
+  }
+
+  /** Saves a copy of a shared lesson so it stays readable even if the share is later removed. */
+  async function addToStash(uid: string, share: SharedLesson): Promise<void> {
+    await setDoc(doc(db, "users", uid, "stash", share.id), {
+      savedAt: new Date().toISOString(),
+      sharedBy: share.ownerName,
+      title: share.title,
+      category: share.category,
+      lesson: toFirestoreLesson(share.lesson),
+    });
+  }
+
+  function toStashEntry(id: string, data: Record<string, unknown>): StashEntry {
+    return {
+      id,
+      savedAt: data.savedAt as string,
+      sharedBy: (data.sharedBy as string | null) ?? null,
+      title: data.title as string,
+      category: data.category as StashEntry["category"],
+      lesson: fromFirestoreLesson(data.lesson as Parameters<typeof fromFirestoreLesson>[0]),
+    };
+  }
+
+  async function getStashEntry(uid: string, id: string): Promise<StashEntry | null> {
+    const snap = await getDoc(doc(db, "users", uid, "stash", id));
+    return snap.exists() ? toStashEntry(id, snap.data()) : null;
+  }
+
+  /** Newest saved first. */
+  async function getStash(uid: string): Promise<StashEntry[]> {
+    const snap = await getDocs(collection(db, "users", uid, "stash"));
+    return snap.docs.map((d) => toStashEntry(d.id, d.data())).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+  }
+
+  async function removeFromStash(uid: string, id: string): Promise<void> {
+    await deleteDoc(doc(db, "users", uid, "stash", id));
+  }
+
+  /** Deletes every document under users/{uid} — streak, weights, history, lessons, progress, stash, share pointers (the shares/ snapshots friends already opened stay). */
   async function resetAllUserData(uid: string): Promise<void> {
     const metaDocs = ["streak", "weights", "history", "categories"].map((id) => doc(db, "users", uid, "meta", id));
-    const [lessonDocs, progressDocs] = await Promise.all([
-      getDocs(collection(db, "users", uid, "lessons")),
-      getDocs(collection(db, "users", uid, "progress")),
-    ]);
+    const [lessonDocs, progressDocs, stashDocs, shareDocs] = await Promise.all(
+      ["lessons", "progress", "stash", "shares"].map((name) => getDocs(collection(db, "users", uid, name)))
+    );
     await Promise.all([
       ...metaDocs.map((d) => deleteDoc(d)),
-      ...lessonDocs.docs.map((d) => deleteDoc(d.ref)),
-      ...progressDocs.docs.map((d) => deleteDoc(d.ref)),
+      ...[lessonDocs, progressDocs, stashDocs, shareDocs].flatMap((snap) => snap.docs.map((d) => deleteDoc(d.ref))),
     ]);
   }
 
@@ -193,6 +267,12 @@ export function createFirestoreApi(db: Firestore) {
     revokeAccess,
     listGenerationLog,
     listCronRunLog,
+    createShare,
+    getShare,
+    addToStash,
+    getStashEntry,
+    getStash,
+    removeFromStash,
     resetAllUserData,
   };
 }

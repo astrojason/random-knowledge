@@ -20,5 +20,11 @@ export const {
   revokeAccess,
   listGenerationLog,
   listCronRunLog,
+  createShare,
+  getShare,
+  addToStash,
+  getStashEntry,
+  getStash,
+  removeFromStash,
   resetAllUserData,
 } = createFirestoreApi(db);
