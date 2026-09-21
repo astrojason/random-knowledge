@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Build step for Firebase App Hosting (see scripts.buildCommand in
+# apphosting.yaml). The backend's root directory is the repo root, which the
+# Next.js adapter doesn't understand, so this does what it would have done.
+set -euo pipefail
+
+# App Hosting rewrites the root package.json and drops its "workspaces"
+# field, so the buildpack's own `npm ci` installs nothing for apps/web.
+# Restore the field and reinstall before building.
+npm pkg set 'workspaces[0]=apps/*' 'workspaces[1]=packages/*'
+npm ci --include=dev
+npm --prefix apps/web run build
+
+# Without a bundle.yaml the runtime image falls back to `node index.js` and
+# the container never starts. Tell App Hosting how to run the app and which
+# files to ship.
+mkdir -p .apphosting
+cat > .apphosting/bundle.yaml <<'YAML'
+version: v1
+runConfig:
+  runCommand: npm --prefix apps/web run start
+outputFiles:
+  serverApp:
+    include:
+      - package.json
+      - apps
+      - packages
+      - node_modules
+YAML
