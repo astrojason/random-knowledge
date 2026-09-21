@@ -6,7 +6,18 @@ import { createShare } from "@/lib/firestore";
 import { shareMessage, shareUrl } from "@/lib/share";
 import type { Lesson } from "@/lib/types";
 
-const linkClass = "text-xs font-medium text-fg-muted underline decoration-border decoration-1 underline-offset-2 hover:text-accent disabled:opacity-60";
+const iconButtonClass = "inline-flex size-8 items-center justify-center rounded-sm text-fg-muted hover:bg-accent-soft hover:text-accent disabled:opacity-60";
+
+/** The standard "share" glyph: a tray with an arrow leaving it. */
+function ShareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-5">
+      <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+      <path d="M16 6l-4-4-4 4" />
+      <path d="M12 2v13" />
+    </svg>
+  );
+}
 
 /** Shares via the native share sheet where available, otherwise copies the link. */
 export function ShareButton({
@@ -44,8 +55,8 @@ export function ShareButton({
 
   return (
     <span className="inline-flex items-center gap-2">
-      <button type="button" onClick={share} disabled={busy} className={linkClass}>
-        Share with a friend
+      <button type="button" onClick={share} disabled={busy} aria-label="Share this lesson" title="Share this lesson" className={iconButtonClass}>
+        <ShareIcon />
       </button>
       {message && (
         <span role={message.isError ? "alert" : "status"} className={message.isError ? "text-xs text-rust" : "text-xs text-fg-muted"}>

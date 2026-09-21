@@ -63,3 +63,13 @@ it("shows and logs a real failure", async () => {
   expect(container.querySelector('[role="alert"]')?.textContent).toBe("Missing or insufficient permissions.");
   expect(console.error).toHaveBeenCalled();
 });
+
+it("renders as a labelled share icon rather than a text link", async () => {
+  await act(async () => {
+    root.render(createElement(ShareButton, { title: "Newton", ownerName: "Ada", resolveShareId }));
+  });
+  const button = container.querySelector("button")!;
+  expect(button.getAttribute("aria-label")).toBe("Share this lesson");
+  expect(button.querySelector("svg")).not.toBeNull();
+  expect(button.textContent).toBe("");
+});

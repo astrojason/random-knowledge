@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Share, Text, View } from "react-native";
+import { Pressable, Share, Text, View } from "react-native";
+import { SymbolView } from "expo-symbols";
 import type { Lesson } from "@random-knowledge/shared/types";
 import { shareMessage, shareUrl } from "@random-knowledge/shared/share";
 import { useAuth } from "../lib/auth-context";
 import { createShare } from "../lib/firestore";
 import { useTheme } from "../lib/theme";
-import { LinkText } from "./ui";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -37,7 +37,16 @@ export function ShareLessonButton({ lesson, date }: { lesson: Lesson; date: stri
 
   return (
     <View style={{ marginBottom: 16 }}>
-      <LinkText title="Share with a friend" onPress={share} />
+      <Pressable
+        onPress={share}
+        disabled={busy}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Share this lesson"
+        style={{ alignSelf: "flex-start", opacity: busy ? 0.6 : 1 }}
+      >
+        <SymbolView name="square.and.arrow.up" size={22} tintColor={theme.fgMuted} />
+      </Pressable>
       {error && <Text style={{ color: theme.rust, fontSize: 13, marginTop: 6 }}>{error}</Text>}
     </View>
   );
