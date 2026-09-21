@@ -4,7 +4,9 @@
 # npm workspace lockfile lives here and apps/web depends on the
 # @random-knowledge/shared workspace package.
 scripts:
-  buildCommand: npm --prefix apps/web run build
+  # Install explicitly: the buildpack did not populate apps/web/node_modules
+  # (next was "not found"), and devDependencies are needed for the build.
+  buildCommand: npm ci --include=dev && npm --prefix apps/web run build
   runCommand: npm --prefix apps/web run start
 #
 # NEXT_PUBLIC_* values are safe to commit (see .env.local.example) and must
