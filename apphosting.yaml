@@ -4,48 +4,7 @@
 # npm workspace lockfile lives here and apps/web depends on the
 # @random-knowledge/shared workspace package.
 scripts:
-  # Install explicitly: the buildpack did not populate apps/web/node_modules
-  # (next was "not found"), and devDependencies are needed for the build.
-  buildCommand: cat package.json; ls -la . apps apps/web packages node_modules; head -c 600 package-lock.json; npm ci --include=dev; ls apps/web/node_modules/.bin | head -3; npm --prefix apps/web run build
-  runCommand: npm --prefix apps/web run start
-#
-# NEXT_PUBLIC_* values are safe to commit (see .env.local.example) and must
-# be present at BUILD time since Next.js inlines them into the client
-# bundle. FIREBASE_SERVICE_ACCOUNT_KEY is intentionally absent: App Hosting
-# runs on Firebase's own infrastructure, so src/lib/firebase-admin.ts's
-# Application Default Credentials fallback covers it with no key needed.
-env:
-  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: "AIzaSyANyJYdqluEmdZ6Ys4DNcQUhC4Or-m7RMI"
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: "random-knowledge-ea232.firebaseapp.com"
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: "random-knowledge-ea232"
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: "random-knowledge-ea232.firebasestorage.app"
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    value: "900940305507"
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: "1:900940305507:web:0043852fa804d0e0a41456"
-    availability: [BUILD, RUNTIME]
-  - variable: OPENAI_MODEL
-    value: "gpt-4o-mini"
-    availability: [RUNTIME]
-  - variable: OPENAI_RESEARCH_MODEL
-    value: "gpt-4.1"
-    availability: [RUNTIME]
-  # Set the value once via: firebase apphosting:secrets:set openai-api-key
-  - variable: OPENAI_API_KEY
-    secret: openai-api-key
-    availability: [RUNTIME]
-  # Bearer token required by /api/cron/generate-daily-lesson, so only the
-  # Cloud Scheduler job (not the public internet) can trigger it.
-  # Set the value once via: firebase apphosting:secrets:set cron-secret
-  - variable: CRON_SECRET
-    secret: cron-secret
-    availability: [RUNTIME]
+  # App Hosting rewrites the root package.json and drops its "workspaces"
+  # field, so the buildpack's own `npm ci` installs nothing for apps/web.
+  # Restore the field and reinstall before building.
+  buildCommand: npm pkg set 'workspaces[0]=apps/*' 'workspaces[1]=packages/*' && npm ci --include=dev && npm --prefix apps/web run build
