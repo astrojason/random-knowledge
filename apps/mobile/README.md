@@ -14,9 +14,11 @@ The Expo/React Native client for the same single-user daily micro-learning app a
 2. `npm install`
 3. `./../../scripts/ios-dev` (or `npm run ios` from this directory) to build and run the iOS dev client — this can't run in plain Expo Go because of the native Google Sign-In module.
 
-## Distribution (ad hoc via EAS internal distribution)
+## Distribution
 
-This app is not on the App Store. It's built with EAS and installed directly on a handful of registered devices (Jason + friends) — no TestFlight, no Diawi.
+The target is an **Unlisted App Store app**: submitted through normal App Review but not searchable — only people with the direct link can install it (steps in the repo root `TODO.md`). Until that's approved, or for quick device testing, use ad hoc builds via EAS internal distribution as described below (registered devices only — no TestFlight, no Diawi).
+
+### Ad hoc via EAS internal distribution
 
 **One-time setup**, once logged in (`eas login`) and the project is linked (`eas build:configure` or `eas init` — this is also what generates `extra.eas.projectId` in `app.json`):
 

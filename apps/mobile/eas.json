@@ -5,6 +5,15 @@
       "ios": {
         "simulator": false
       }
+    },
+    "production": {
+      "autoIncrement": true
     }
+  },
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "submit": {
+    "production": {}
   }
 }
