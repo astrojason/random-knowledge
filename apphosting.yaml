@@ -1,5 +1,12 @@
 # Firebase App Hosting runtime config — see scripts/deploy at the repo root.
 #
+# The backend's root directory is the repo root (not apps/web) because the
+# npm workspace lockfile lives here and apps/web depends on the
+# @random-knowledge/shared workspace package.
+scripts:
+  buildCommand: npm --prefix apps/web run build
+  runCommand: npm --prefix apps/web run start
+#
 # NEXT_PUBLIC_* values are safe to commit (see .env.local.example) and must
 # be present at BUILD time since Next.js inlines them into the client
 # bundle. FIREBASE_SERVICE_ACCOUNT_KEY is intentionally absent: App Hosting
