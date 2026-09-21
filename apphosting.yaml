@@ -6,7 +6,7 @@
 scripts:
   # Install explicitly: the buildpack did not populate apps/web/node_modules
   # (next was "not found"), and devDependencies are needed for the build.
-  buildCommand: npm ci --include=dev && npm --prefix apps/web run build
+  buildCommand: npm config list && env | grep -i '^npm_\|^node_env' ; pwd && npm ci --include=dev --workspaces --include-workspace-root && ls apps/web/node_modules/.bin | head -3 && npm --prefix apps/web run build
   runCommand: npm --prefix apps/web run start
 #
 # NEXT_PUBLIC_* values are safe to commit (see .env.local.example) and must
