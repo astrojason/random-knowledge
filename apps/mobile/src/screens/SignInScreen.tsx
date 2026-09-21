@@ -1,8 +1,11 @@
-import { Linking, ScrollView, StyleSheet, Text } from "react-native";
+import * as AppleAuthentication from "expo-apple-authentication";
+import { useState } from "react";
+import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { CATEGORIES } from "@random-knowledge/shared/categories";
 import { useAuth } from "../lib/auth-context";
 import { useTheme } from "../lib/theme";
-import { Card, Button } from "../components/ui";
+import { Card, Button, LinkText } from "../components/ui";
+import { EmailSignInScreen } from "./EmailSignInScreen";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -27,7 +30,11 @@ const FEATURES = [
 
 export function SignInScreen() {
   const theme = useTheme();
-  const { signIn, error } = useAuth();
+  const isDark = useColorScheme() === "dark";
+  const { signIn, signInApple, error } = useAuth();
+  const [emailSignIn, setEmailSignIn] = useState(false);
+
+  if (emailSignIn) return <EmailSignInScreen onBack={() => setEmailSignIn(false)} />;
 
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
@@ -46,10 +53,24 @@ export function SignInScreen() {
 
       <Card style={styles.signIn}>
         <Text style={{ color: theme.fgMuted, fontSize: 13, textAlign: "center", marginBottom: 20 }}>
-          Random Knowledge is currently invite-only. Sign in with Google to request access — you&apos;ll be
+          Random Knowledge is currently invite-only. Sign in to request access — you&apos;ll be
           able to use the app as soon as it&apos;s approved.
         </Text>
+        <AppleAuthentication.AppleAuthenticationButton
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+          buttonStyle={
+            isDark
+              ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+              : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+          }
+          cornerRadius={8}
+          style={styles.appleButton}
+          onPress={signInApple}
+        />
         <Button title="Sign in with Google" onPress={signIn} />
+        <View style={styles.emailLink}>
+          <LinkText title="Sign in with email" onPress={() => setEmailSignIn(true)} />
+        </View>
         {error && <Text style={{ color: theme.rust, fontSize: 13, marginTop: 14, textAlign: "center" }}>{error}</Text>}
         {API_BASE_URL && (
           <Text style={{ color: theme.fgMuted, fontSize: 11, marginTop: 18, textAlign: "center" }}>
@@ -74,4 +95,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 30, fontWeight: "700", textAlign: "center" },
   feature: { marginBottom: 12 },
   signIn: { marginTop: 12, alignItems: "center" },
+  emailLink: { marginTop: 16 },
+  appleButton: { width: "100%", height: 44, marginBottom: 12 },
 });

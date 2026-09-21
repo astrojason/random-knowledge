@@ -8,9 +8,13 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.astrojason.randomknowledge",
+      "bundleIdentifier": "com.astrojason.random-knowledge",
       "supportsTablet": false,
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "usesAppleSignIn": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.astrojason.randomknowledge",
@@ -26,6 +30,7 @@
     },
     "plugins": [
       "@react-native-google-signin/google-signin",
+      "expo-apple-authentication",
       "expo-dev-client"
     ],
     "extra": {

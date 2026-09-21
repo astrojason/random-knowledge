@@ -3,6 +3,8 @@ import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { AuthClaims } from "@random-knowledge/shared/auth-guard";
 import { auth } from "./firebase";
+import { signInWithApple } from "./appleSignIn";
+import { signInWithEmail } from "./emailSignIn";
 import { signInWithGoogle } from "./googleSignIn";
 
 interface AuthContextValue {
@@ -11,6 +13,8 @@ interface AuthContextValue {
   loading: boolean;
   error: string | null;
   signIn: () => Promise<void>;
+  signInApple: () => Promise<void>;
+  signInEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -43,14 +47,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const signIn = async () => {
+  const runSignIn = async (flow: () => Promise<unknown>) => {
     setError(null);
     try {
-      await signInWithGoogle();
+      await flow();
     } catch (err) {
+      console.error("Sign-in failed", err);
       setError(err instanceof Error ? err.message : "Sign-in failed");
     }
   };
+
+  const signIn = () => runSignIn(signInWithGoogle);
+  const signInApple = () => runSignIn(signInWithApple);
+  const signInEmail = (email: string, password: string) => runSignIn(() => signInWithEmail(email, password));
 
   const signOut = async () => {
     setError(null);
@@ -63,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, claims, loading, error, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, claims, loading, error, signIn, signInApple, signInEmail, signOut }}>
       {children}
     </AuthContext.Provider>
   );
