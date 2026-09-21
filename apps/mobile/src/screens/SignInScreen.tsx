@@ -1,10 +1,11 @@
 import * as AppleAuthentication from "expo-apple-authentication";
-import { Linking, ScrollView, StyleSheet, Text, useColorScheme } from "react-native";
+import { useState } from "react";
+import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { CATEGORIES } from "@random-knowledge/shared/categories";
 import { useAuth } from "../lib/auth-context";
 import { useTheme } from "../lib/theme";
-import { Card, Button } from "../components/ui";
-import { ReviewerSignIn } from "../components/ReviewerSignIn";
+import { Card, Button, LinkText } from "../components/ui";
+import { EmailSignInScreen } from "./EmailSignInScreen";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -31,6 +32,9 @@ export function SignInScreen() {
   const theme = useTheme();
   const isDark = useColorScheme() === "dark";
   const { signIn, signInApple, error } = useAuth();
+  const [emailSignIn, setEmailSignIn] = useState(false);
+
+  if (emailSignIn) return <EmailSignInScreen onBack={() => setEmailSignIn(false)} />;
 
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
@@ -64,7 +68,9 @@ export function SignInScreen() {
           onPress={signInApple}
         />
         <Button title="Sign in with Google" onPress={signIn} />
-        <ReviewerSignIn />
+        <View style={styles.emailLink}>
+          <LinkText title="Sign in with email" onPress={() => setEmailSignIn(true)} />
+        </View>
         {error && <Text style={{ color: theme.rust, fontSize: 13, marginTop: 14, textAlign: "center" }}>{error}</Text>}
         {API_BASE_URL && (
           <Text style={{ color: theme.fgMuted, fontSize: 11, marginTop: 18, textAlign: "center" }}>
@@ -89,5 +95,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 30, fontWeight: "700", textAlign: "center" },
   feature: { marginBottom: 12 },
   signIn: { marginTop: 12, alignItems: "center" },
+  emailLink: { marginTop: 16 },
   appleButton: { width: "100%", height: 44, marginBottom: 12 },
 });
