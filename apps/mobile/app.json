@@ -31,7 +31,15 @@
     "plugins": [
       "@react-native-google-signin/google-signin",
       "expo-apple-authentication",
-      "expo-dev-client"
+      "expo-dev-client",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#141b22",
+          "imageWidth": 160
+        }
+      ]
     ],
     "extra": {
       "eas": {

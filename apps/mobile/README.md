@@ -16,34 +16,9 @@ The Expo/React Native client for the same single-user daily micro-learning app a
 
 ## Distribution
 
-The target is an **Unlisted App Store app**: submitted through normal App Review but not searchable — only people with the direct link can install it (steps in the repo root `TODO.md`). Until that's approved, or for quick device testing, use ad hoc builds via EAS internal distribution as described below (registered devices only — no TestFlight, no Diawi).
+The target is an **Unlisted App Store app**: submitted through normal App Review but not searchable — only people with the direct link can install it (steps in the repo root `TODO.md`).
 
-### Ad hoc via EAS internal distribution
-
-**One-time setup**, once logged in (`eas login`) and the project is linked (`eas build:configure` or `eas init` — this is also what generates `extra.eas.projectId` in `app.json`):
-
-- Confirm the EAS project's build visibility is **public**, so a friend can open the install link/QR code in Safari and install without an Expo account. Check with `eas build:view <build-id>` or on the project's dashboard page; if a build page requires login, switch its visibility (or the project default) to public.
-- `eas.json` has an `internal` profile (`"distribution": "internal"`) for exactly this — it builds a real-device `.ipa` (`ios.simulator: false`), not a simulator build.
-
-**Registering a new friend's device:**
-
-```
-eas device:create
-```
-
-This emails/prints a link — have them open it in Safari on the iPhone that should get the app. It installs a UDID-capture provisioning profile; once that's done, their device's UDID is registered to the project's ad hoc provisioning profile.
-
-**Rebuilding after a new device is registered:**
-
-```
-eas build --profile internal --platform ios
-```
-
-Existing devices don't need a new build when nothing else changed, but a build made *before* a device was registered won't install on it — a new device requires a new build to pick up the updated provisioning profile.
-
-**Sending the build to friends:**
-
-The build finishes with an install link and QR code (also on the build's page in the EAS dashboard) — send that link (or have them scan the QR code). On their iPhone: open the link in Safari, tap install, then do the one-time trust step at **Settings → General → VPN & Device Management** → select the developer profile → Trust.
+For your own testing, plug your iPhone in and run `npm run ios` (dev client). To try a release-like build, upload a production build (`eas build --platform ios --profile production`, then `eas submit`) and install it from TestFlight — internal testing skips Apple review.
 
 ## Scripts
 

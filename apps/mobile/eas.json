@@ -1,12 +1,7 @@
 {
   "build": {
-    "internal": {
-      "distribution": "internal",
-      "ios": {
-        "simulator": false
-      }
-    },
     "production": {
+      "environment": "production",
       "autoIncrement": true
     }
   },
