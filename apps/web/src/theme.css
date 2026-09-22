@@ -1,5 +1,5 @@
-/* Design tokens follow the OS preference unless an explicit theme is selected.
- * To add a theme, add its selector here and its name to THEME_VALUES in src/lib/theme.ts.
+/* Design tokens follow the OS light/dark preference via light-dark(); there is
+ * no in-app override — the device's own appearance setting is the theme.
  */
 
 :root {
@@ -18,14 +18,6 @@
   --color-rust-soft: light-dark(rgb(184 98 46 / 0.1), rgb(224 138 85 / 0.14));
   --color-correct: light-dark(rgb(47 110 104 / 0.12), rgb(95 179 170 / 0.16));
   --color-incorrect: light-dark(rgb(184 98 46 / 0.1), rgb(224 138 85 / 0.14));
-}
-
-[data-theme='paper'] {
-  color-scheme: light;
-}
-
-[data-theme='dusk'] {
-  color-scheme: dark;
 }
 
 @theme inline {

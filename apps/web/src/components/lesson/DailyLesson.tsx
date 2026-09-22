@@ -29,15 +29,18 @@ export function DailyLesson() {
           date={date}
           category={lesson?.category}
           showAdminLink={isSuperadmin(claims)}
+          showCategoriesSetting={canEditCategories && !editingCategories}
+          categoryCount={selectedCategories.length}
+          onEditCategories={() => {
+            setEditingCategories(true);
+            setCategoriesSaved(false);
+          }}
           onSignOut={signOut}
         />
 
-        {canEditCategories && !editingCategories && (
-          <div className="mb-5 flex flex-wrap items-center gap-3">
-            <button type="button" onClick={() => { setEditingCategories(true); setCategoriesSaved(false); }} className="text-sm font-semibold text-accent underline">
-              My categories ({selectedCategories.length})
-            </button>
-            {categoriesSaved && <span role="status" className="text-xs text-fg-muted">Categories saved for future lessons.</span>}
+        {canEditCategories && !editingCategories && categoriesSaved && (
+          <div className="mb-5">
+            <span role="status" className="text-xs text-fg-muted">Categories saved for future lessons.</span>
           </div>
         )}
         {showCategoryPicker(phase, editingCategories) && (

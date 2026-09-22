@@ -8,11 +8,12 @@ import { useDailyLesson } from "../hooks/useDailyLesson";
 import { CategoryPicker } from "../components/CategoryPicker";
 import { DoneView } from "../components/DoneView";
 import { ErrorView } from "../components/ErrorView";
+import { HeaderMenu } from "../components/HeaderMenu";
 import { LessonView } from "../components/LessonView";
 import { LoadingView } from "../components/LoadingView";
 import { QuizView } from "../components/QuizView";
 import { StreakStatus } from "../components/StreakStatus";
-import { Card, LinkText } from "../components/ui";
+import { Card } from "../components/ui";
 
 export function DailyLessonScreen() {
   const theme = useTheme();
@@ -23,6 +24,7 @@ export function DailyLessonScreen() {
   const [categoriesSaved, setCategoriesSaved] = useState(false);
   const canEditCategories = ["lesson", "quiz", "done"].includes(phase);
   const showCategoryPicker = phase === "categories" || (canEditCategories && editingCategories);
+  const showCategoriesSetting = canEditCategories && !editingCategories;
 
   function confirmReset() {
     Alert.alert(
@@ -49,9 +51,19 @@ export function DailyLessonScreen() {
         <View style={[styles.header, { borderColor: theme.border }]}>
           <View style={styles.headerRow}>
             <Text style={{ color: theme.fgMuted, fontSize: 13 }}>{formatDateLabel(date)}</Text>
-            <Text onPress={signOut} style={{ color: theme.fgMuted, fontSize: 12, fontWeight: "500", textDecorationLine: "underline" }}>
-              Sign out
-            </Text>
+            <View style={styles.headerActions}>
+              <Text onPress={signOut} style={{ color: theme.fgMuted, fontSize: 12, fontWeight: "500", textDecorationLine: "underline" }}>
+                Sign out
+              </Text>
+              <HeaderMenu
+                showCategoriesSetting={showCategoriesSetting}
+                categoryCount={selectedCategories.length}
+                onEditCategories={() => {
+                  setEditingCategories(true);
+                  setCategoriesSaved(false);
+                }}
+              />
+            </View>
           </View>
           {lesson?.category && (
             <View style={[styles.badge, { backgroundColor: theme.accentSoft }]}>
@@ -60,16 +72,9 @@ export function DailyLessonScreen() {
           )}
         </View>
 
-        {canEditCategories && !editingCategories && (
+        {showCategoriesSetting && categoriesSaved && (
           <View style={styles.categoryToggle}>
-            <LinkText
-              title={`My categories (${selectedCategories.length})`}
-              onPress={() => {
-                setEditingCategories(true);
-                setCategoriesSaved(false);
-              }}
-            />
-            {categoriesSaved && <Text style={{ color: theme.fgMuted, fontSize: 11 }}>Categories saved for future lessons.</Text>}
+            <Text style={{ color: theme.fgMuted, fontSize: 11 }}>Categories saved for future lessons.</Text>
           </View>
         )}
 
@@ -126,7 +131,8 @@ function LessonPhase({ state }: { state: ReturnType<typeof useDailyLesson> }) {
 const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 48 },
   header: { borderBottomWidth: 1, paddingBottom: 14, marginBottom: 20 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 14 },
   badge: { alignSelf: "flex-start", borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4, marginTop: 14 },
   categoryToggle: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 20 },
   streak: { marginTop: 20 },

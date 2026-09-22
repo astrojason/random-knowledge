@@ -12,12 +12,7 @@ Before starting a dev server to test something, check whether one is already run
 
 Always use Tailwind utility classes instead of hardcoded CSS values (colors, spacing, font sizes, etc.) — never write inline `style={{ ... }}` or one-off CSS with literal hex codes, pixel values, or magic numbers. Reach for a Tailwind class (or a token from `src/theme.css` — see below) first, and only drop into `@layer base`/`@layer components` CSS for things Tailwind genuinely can't express.
 
-**Custom themes:** Design tokens live in `apps/web/src/theme.css` as CSS variables, mapped into Tailwind's `@theme inline` so they're usable as ordinary utility classes (`bg-bg`, `text-fg`, `text-fg-muted`, `bg-surface`, `border-border`, `bg-accent`, `text-accent-fg`, `font-heading`). Each theme is a `[data-theme='name']` block overriding those variables. To add a new theme:
-
-1. Add a `[data-theme='your-theme']` block in `theme.css` with new values for each variable.
-2. Add the theme name to `THEME_VALUES` in `apps/web/src/lib/theme.ts`.
-
-Switching themes at runtime sets `data-theme` on `<html>` (see `src/lib/theme.ts` / `src/components/ThemeToggle.tsx`); no `data-theme` attribute falls back to the OS light/dark preference. Never hardcode a color that should come from the active theme — use the token classes so every theme stays correct automatically.
+**Theming:** Design tokens live in `apps/web/src/theme.css` as CSS variables (each set with `light-dark(light-value, dark-value)`), mapped into Tailwind's `@theme inline` so they're usable as ordinary utility classes (`bg-bg`, `text-fg`, `text-fg-muted`, `bg-surface`, `border-border`, `bg-accent`, `text-accent-fg`, `font-heading`). There is no in-app light/dark toggle on web or mobile — both follow the device's own OS appearance setting only. Never hardcode a color that should come from the active theme — use the token classes so light and dark both stay correct automatically.
 
 ### DRY
 
