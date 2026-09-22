@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SymbolView } from "expo-symbols";
 import { formatDateLabel } from "@random-knowledge/shared/date";
 import { CATEGORIES } from "@random-knowledge/shared/categories";
+import { getStreakStatus } from "@random-knowledge/shared/streak";
 import { useAuth } from "../lib/auth-context";
 import { useTheme } from "../lib/theme";
 import { useDailyLesson } from "../hooks/useDailyLesson";
@@ -25,6 +27,7 @@ export function DailyLessonScreen() {
   const canEditCategories = ["lesson", "quiz", "done"].includes(phase);
   const showCategoryPicker = phase === "categories" || (canEditCategories && editingCategories);
   const showCategoriesSetting = canEditCategories && !editingCategories;
+  const streakCount = getStreakStatus(streak, date).count;
 
   function confirmReset() {
     Alert.alert(
@@ -50,7 +53,15 @@ export function DailyLessonScreen() {
       <Card>
         <View style={[styles.header, { borderColor: theme.border }]}>
           <View style={styles.headerRow}>
-            <Text style={{ color: theme.fgMuted, fontSize: 13 }}>{formatDateLabel(date)}</Text>
+            <View style={styles.dateRow}>
+              <Text style={{ color: theme.fgMuted, fontSize: 13 }}>{formatDateLabel(date)}</Text>
+              {streakCount > 0 && (
+                <View style={styles.streakBadge} accessibilityLabel={`${streakCount} ${streakCount === 1 ? "day" : "days"} streak`}>
+                  <SymbolView name="flame.fill" size={13} tintColor={theme.accent} />
+                  <Text style={{ color: theme.accent, fontSize: 12, fontWeight: "600" }}>{streakCount}</Text>
+                </View>
+              )}
+            </View>
             <View style={styles.headerActions}>
               <Text onPress={signOut} style={{ color: theme.fgMuted, fontSize: 12, fontWeight: "500", textDecorationLine: "underline" }}>
                 Sign out
@@ -132,6 +143,8 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 48 },
   header: { borderBottomWidth: 1, paddingBottom: 14, marginBottom: 20 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  dateRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  streakBadge: { flexDirection: "row", alignItems: "center", gap: 2 },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 14 },
   badge: { alignSelf: "flex-start", borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4, marginTop: 14 },
   categoryToggle: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 20 },

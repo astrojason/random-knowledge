@@ -47,6 +47,22 @@ describe("daily lesson phases", () => {
     vi.mocked(useDailyLesson).mockReturnValue({ ...state("done"), progress: null });
     expect(renderToStaticMarkup(createElement(DailyLesson))).not.toContain("of 1 today");
   });
+
+  it("shows the streak count by the date once there's an active streak", () => {
+    vi.mocked(useDailyLesson).mockReturnValue({
+      ...state("lesson"),
+      streak: { streak: 5, longest: 5, lastDate: "2026-09-09" },
+    });
+    const html = renderToStaticMarkup(createElement(DailyLesson));
+    expect(html).toContain('aria-label="5 days streak"');
+  });
+
+  it("hides the streak count before there's an active streak", () => {
+    vi.mocked(useDailyLesson).mockReturnValue(state("lesson"));
+    const html = renderToStaticMarkup(createElement(DailyLesson));
+    expect(html).not.toContain("days streak");
+    expect(html).not.toContain("day streak");
+  });
 });
 
 describe("quiz feedback", () => {
