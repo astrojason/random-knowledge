@@ -53,7 +53,6 @@ export function DailyLessonScreen() {
               Sign out
             </Text>
           </View>
-          {phase !== "loading" && <StreakStatus streak={streak} date={date} />}
           {lesson?.category && (
             <View style={[styles.badge, { backgroundColor: theme.accentSoft }]}>
               <Text style={{ color: theme.accent, fontSize: 12, fontWeight: "600" }}>{CATEGORIES[lesson.category]}</Text>
@@ -87,6 +86,12 @@ export function DailyLessonScreen() {
         )}
 
         <LessonPhase state={state} />
+
+        {phase !== "loading" && (
+          <View style={styles.streak}>
+            <StreakStatus streak={streak} date={date} />
+          </View>
+        )}
 
         <View style={[styles.footer, { borderColor: theme.border }]}>
           <Text onPress={confirmReset} style={{ color: theme.fgMuted, fontSize: 11, textDecorationLine: "underline" }}>
@@ -124,5 +129,6 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 },
   badge: { alignSelf: "flex-start", borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4, marginTop: 14 },
   categoryToggle: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 20 },
+  streak: { marginTop: 20 },
   footer: { borderTopWidth: 1, paddingTop: 12, marginTop: 24 },
 });

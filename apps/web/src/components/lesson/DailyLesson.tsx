@@ -9,6 +9,7 @@ import { Header } from "@/components/lesson/Header";
 import { LessonView } from "@/components/lesson/LessonView";
 import { LoadingView } from "@/components/lesson/LoadingView";
 import { QuizView } from "@/components/lesson/QuizView";
+import { StreakStatus } from "@/components/lesson/StreakStatus";
 import { useAuth } from "@/lib/auth-context";
 import { isSuperadmin } from "@/lib/auth-guard";
 import { useDailyLesson } from "@/lib/useDailyLesson";
@@ -26,8 +27,6 @@ export function DailyLesson() {
       <Card>
         <Header
           date={date}
-          streak={streak}
-          showStreak={phase !== "loading"}
           category={lesson?.category}
           showAdminLink={isSuperadmin(claims)}
           onSignOut={signOut}
@@ -55,6 +54,12 @@ export function DailyLesson() {
         )}
 
         <LessonPhase state={state} />
+
+        {phase !== "loading" && (
+          <div className="mt-6">
+            <StreakStatus streak={streak} date={date} />
+          </div>
+        )}
 
         <div className="mt-6 flex justify-between border-t border-border pt-3">
           <button
