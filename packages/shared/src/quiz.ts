@@ -5,6 +5,9 @@ export interface QuizState {
   answers: number[];
 }
 
+/** Sentinel `selected`/`answers` value for "I don't remember" — never a valid option index. */
+export const DONT_REMEMBER = -1;
+
 export const initialQuizState: QuizState = { qIndex: 0, correct: 0, selected: null, answers: [] };
 
 export function selectAnswer(quiz: QuizState, index: number, correctIndex: number): QuizState {

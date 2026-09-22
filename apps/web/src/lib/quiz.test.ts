@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceQuiz, initialQuizState, selectAnswer } from "./quiz";
+import { advanceQuiz, DONT_REMEMBER, initialQuizState, selectAnswer } from "./quiz";
 
 describe("selectAnswer", () => {
   it("records the selection, increments correct when right, and stores it in answers", () => {
@@ -21,6 +21,11 @@ describe("selectAnswer", () => {
     const midQuiz = { qIndex: 1, correct: 1, selected: null, answers: [2] };
     const next = selectAnswer(midQuiz, 0, 0);
     expect(next.answers).toEqual([2, 0]);
+  });
+
+  it("records 'I don't remember' as an honest non-guess, never counted as correct", () => {
+    const next = selectAnswer(initialQuizState, DONT_REMEMBER, 2);
+    expect(next).toEqual({ qIndex: 0, correct: 0, selected: DONT_REMEMBER, answers: [DONT_REMEMBER] });
   });
 });
 

@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { QuizState } from "@random-knowledge/shared/quiz";
+import { DONT_REMEMBER, type QuizState } from "@random-knowledge/shared/quiz";
 import type { Lesson } from "@random-knowledge/shared/types";
 import { useTheme } from "../lib/theme";
 import { Button } from "./ui";
@@ -44,6 +44,18 @@ export function QuizView({
           );
         })}
       </View>
+      {!answered && (
+        <Pressable onPress={() => onSelect(DONT_REMEMBER)} style={{ marginBottom: 4 }}>
+          <Text style={{ color: theme.fgMuted, fontSize: 13, textDecorationLine: "underline" }}>
+            I don&apos;t remember
+          </Text>
+        </Pressable>
+      )}
+      {answered && quiz.selected === DONT_REMEMBER && (
+        <Text style={{ color: theme.fgMuted, fontSize: 13, marginBottom: 4 }}>
+          You said you didn&apos;t remember — that&apos;s honest, and now you know.
+        </Text>
+      )}
       {answered && (
         <>
           <Text style={{ color: theme.fgMuted, fontSize: 13, fontStyle: "italic", lineHeight: 19, marginTop: 8 }}>

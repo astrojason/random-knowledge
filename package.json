@@ -1,6 +1,6 @@
 {
   "name": "random-knowledge.astrojason.com",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "private": true,
   "workspaces": [
     "apps/*",

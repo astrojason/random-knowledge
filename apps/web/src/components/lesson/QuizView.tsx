@@ -1,3 +1,4 @@
+import { DONT_REMEMBER } from "@/lib/quiz";
 import type { Lesson } from "@/lib/types";
 
 interface QuizState {
@@ -51,6 +52,20 @@ export function QuizView({
           );
         })}
       </div>
+      {!answered && (
+        <button
+          type="button"
+          onClick={() => onSelect(DONT_REMEMBER)}
+          className="mb-1 cursor-pointer text-[13px] text-fg-muted underline decoration-dotted underline-offset-2 hover:text-fg"
+        >
+          I don&apos;t remember
+        </button>
+      )}
+      {answered && quiz.selected === DONT_REMEMBER && (
+        <p className="mb-1 text-[13px] text-fg-muted">
+          You said you didn&apos;t remember — that&apos;s honest, and now you know.
+        </p>
+      )}
       {answered && (
         <>
           <p className="mt-2.5 text-[13.5px] italic leading-relaxed text-fg-muted">{q.explanation}</p>

@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { DONT_REMEMBER } from "@random-knowledge/shared/quiz";
 import type { Lesson } from "@random-knowledge/shared/types";
 import { useTheme } from "../lib/theme";
 
@@ -24,6 +25,9 @@ export function QuizReview({ lesson, answers }: { lesson: Lesson; answers: numbe
                 </View>
               );
             })}
+            {selected === DONT_REMEMBER && (
+              <Text style={{ color: theme.fgMuted, fontSize: 13, marginBottom: 8 }}>You said you didn&apos;t remember.</Text>
+            )}
             <Text style={{ color: theme.fgMuted, fontSize: 13, fontStyle: "italic", lineHeight: 19 }}>{q.explanation}</Text>
           </View>
         );

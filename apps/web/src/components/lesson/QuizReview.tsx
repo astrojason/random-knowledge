@@ -1,3 +1,4 @@
+import { DONT_REMEMBER } from "@/lib/quiz";
 import type { Lesson } from "@/lib/types";
 
 export function QuizReview({ lesson, answers }: { lesson: Lesson; answers: number[] }) {
@@ -33,6 +34,9 @@ export function QuizReview({ lesson, answers }: { lesson: Lesson; answers: numbe
                   );
                 })}
               </div>
+              {selected === DONT_REMEMBER && (
+                <p className="mb-2 text-[13px] text-fg-muted">You said you didn&apos;t remember.</p>
+              )}
               <p className="text-[13.5px] italic leading-relaxed text-fg-muted">{q.explanation}</p>
             </div>
           );
