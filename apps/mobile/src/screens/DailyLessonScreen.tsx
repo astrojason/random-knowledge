@@ -87,7 +87,7 @@ export function DailyLessonScreen() {
 
         <LessonPhase state={state} />
 
-        {phase !== "loading" && (
+        {(phase === "lesson" || phase === "done") && (
           <View style={styles.streak}>
             <StreakStatus streak={streak} date={date} />
           </View>

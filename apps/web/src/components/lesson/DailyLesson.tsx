@@ -55,7 +55,7 @@ export function DailyLesson() {
 
         <LessonPhase state={state} />
 
-        {phase !== "loading" && (
+        {(phase === "lesson" || phase === "done") && (
           <div className="mt-6">
             <StreakStatus streak={streak} date={date} />
           </div>
