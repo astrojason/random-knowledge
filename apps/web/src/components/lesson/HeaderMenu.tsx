@@ -51,7 +51,7 @@ export function HeaderMenu({
         role="dialog"
         aria-modal="true"
         aria-label="Menu"
-        className={`fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] border-l border-border bg-surface p-5 shadow-lg transition-transform duration-200 ${open ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] border-r border-border bg-surface p-5 shadow-lg transition-transform duration-200 ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="mb-5 flex items-center justify-between">
           <span className="font-heading text-lg font-semibold text-fg-strong">Menu</span>

@@ -6,7 +6,7 @@ import { LinkText } from "./ui";
 
 const PANEL_WIDTH = 280;
 
-/** A right-side sliding menu, opened from a hamburger button. Settings live here so the header row stays to just the date and sign out. */
+/** A left-side sliding menu, opened from a hamburger button. Settings live here so the header row stays to just the date and sign out. */
 export function HeaderMenu({
   showCategoriesSetting,
   categoryCount,
@@ -18,16 +18,16 @@ export function HeaderMenu({
 }) {
   const theme = useTheme();
   const [visible, setVisible] = useState(false);
-  const [translateX] = useState(() => new Animated.Value(PANEL_WIDTH));
+  const [translateX] = useState(() => new Animated.Value(-PANEL_WIDTH));
 
   useEffect(() => {
     if (!visible) return;
-    translateX.setValue(PANEL_WIDTH);
+    translateX.setValue(-PANEL_WIDTH);
     Animated.timing(translateX, { toValue: 0, duration: 200, useNativeDriver: true }).start();
   }, [visible, translateX]);
 
   function close() {
-    Animated.timing(translateX, { toValue: PANEL_WIDTH, duration: 180, useNativeDriver: true }).start(() => setVisible(false));
+    Animated.timing(translateX, { toValue: -PANEL_WIDTH, duration: 180, useNativeDriver: true }).start(() => setVisible(false));
   }
 
   return (
@@ -38,7 +38,6 @@ export function HeaderMenu({
 
       <Modal visible={visible} transparent animationType="none" onRequestClose={close}>
         <View style={styles.root}>
-          <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Close menu" />
           <Animated.View
             style={[
               styles.panel,
@@ -65,6 +64,7 @@ export function HeaderMenu({
               </View>
             )}
           </Animated.View>
+          <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Close menu" />
         </View>
       </Modal>
     </>
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.4)" },
   panel: {
     width: PANEL_WIDTH,
-    borderLeftWidth: 1,
+    borderRightWidth: 1,
     padding: 20,
     paddingTop: 60,
   },

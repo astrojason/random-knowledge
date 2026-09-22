@@ -24,33 +24,33 @@ export function Header({
   return (
     <div className="mb-5 border-b border-border pb-3.5">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[13px] text-fg-muted">{formatDateLabel(date)}</span>
-          {streakCount > 0 && (
-            <span
-              aria-label={`${streakCount} ${streakCount === 1 ? "day" : "days"} streak`}
-              className="flex items-center gap-0.5 text-xs font-semibold text-accent"
-            >
-              <FlameIcon className="size-3.5" />
-              {streakCount}
-            </span>
-          )}
-        </div>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="text-xs font-medium text-fg-muted underline decoration-border decoration-1 underline-offset-2 hover:text-accent"
-          >
-            Sign out
-          </button>
           <HeaderMenu
             showAdminLink={showAdminLink}
             showCategoriesSetting={showCategoriesSetting}
             categoryCount={categoryCount}
             onEditCategories={onEditCategories}
           />
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] text-fg-muted">{formatDateLabel(date)}</span>
+            {streakCount > 0 && (
+              <span
+                aria-label={`${streakCount} ${streakCount === 1 ? "day" : "days"} streak`}
+                className="flex items-center gap-0.5 text-xs font-semibold text-accent"
+              >
+                <FlameIcon className="size-3.5" />
+                {streakCount}
+              </span>
+            )}
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="text-xs font-medium text-fg-muted underline decoration-border decoration-1 underline-offset-2 hover:text-accent"
+        >
+          Sign out
+        </button>
       </div>
       {category && (
         <span className="mt-3.5 inline-block rounded-sm bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent">

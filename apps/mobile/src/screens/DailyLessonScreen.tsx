@@ -53,19 +53,7 @@ export function DailyLessonScreen() {
       <Card>
         <View style={[styles.header, { borderColor: theme.border }]}>
           <View style={styles.headerRow}>
-            <View style={styles.dateRow}>
-              <Text style={{ color: theme.fgMuted, fontSize: 13 }}>{formatDateLabel(date)}</Text>
-              {streakCount > 0 && (
-                <View style={styles.streakBadge} accessibilityLabel={`${streakCount} ${streakCount === 1 ? "day" : "days"} streak`}>
-                  <SymbolView name="flame.fill" size={13} tintColor={theme.accent} />
-                  <Text style={{ color: theme.accent, fontSize: 12, fontWeight: "600" }}>{streakCount}</Text>
-                </View>
-              )}
-            </View>
             <View style={styles.headerActions}>
-              <Text onPress={signOut} style={{ color: theme.fgMuted, fontSize: 12, fontWeight: "500", textDecorationLine: "underline" }}>
-                Sign out
-              </Text>
               <HeaderMenu
                 showCategoriesSetting={showCategoriesSetting}
                 categoryCount={selectedCategories.length}
@@ -74,7 +62,19 @@ export function DailyLessonScreen() {
                   setCategoriesSaved(false);
                 }}
               />
+              <View style={styles.dateRow}>
+                <Text style={{ color: theme.fgMuted, fontSize: 13 }}>{formatDateLabel(date)}</Text>
+                {streakCount > 0 && (
+                  <View style={styles.streakBadge} accessibilityLabel={`${streakCount} ${streakCount === 1 ? "day" : "days"} streak`}>
+                    <SymbolView name="flame.fill" size={13} tintColor={theme.accent} />
+                    <Text style={{ color: theme.accent, fontSize: 12, fontWeight: "600" }}>{streakCount}</Text>
+                  </View>
+                )}
+              </View>
             </View>
+            <Text onPress={signOut} style={{ color: theme.fgMuted, fontSize: 12, fontWeight: "500", textDecorationLine: "underline" }}>
+              Sign out
+            </Text>
           </View>
           {lesson?.category && (
             <View style={[styles.badge, { backgroundColor: theme.accentSoft }]}>
