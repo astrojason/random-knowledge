@@ -1,4 +1,5 @@
 import type { User } from "@firebase/auth";
+import * as Notifications from "expo-notifications";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { CATEGORY_KEYS, defaultWeights, pickCategory, type CategoryKey, type Weights } from "@random-knowledge/shared/categories";
@@ -19,6 +20,7 @@ import {
   setSelectedCategories,
   setWeights,
 } from "../lib/firestore";
+import { registerPushToken } from "../lib/pushToken";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -92,6 +94,19 @@ export function useDailyLesson(user: User | null) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  useEffect(() => {
+    // Register this device for the badge-only push the daily-lesson cron
+    // sends once per user — a no-op if already registered for this session.
+    if (user) void registerPushToken(user.uid);
+  }, [user]);
+
+  useEffect(() => {
+    // Clears a badge set by the server push once the pending lesson is read;
+    // defense in depth, since opening the app already reflects the lesson's
+    // real state regardless of whether the push arrived.
+    void Notifications.setBadgeCountAsync(phase === "lesson" || phase === "quiz" ? 1 : 0);
+  }, [phase]);
 
   useEffect(() => {
     // Refresh on local midnight or the app returning to the foreground.

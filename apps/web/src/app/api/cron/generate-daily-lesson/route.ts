@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { pickCategory } from "@/lib/categories";
 import { todayStr } from "@/lib/date";
-import { getDailyGenerationContextAdmin, listGrantedUserIds, logCronRunAdmin, logGenerationAdmin, saveDailyLessonAdmin } from "@/lib/firebase-admin";
+import { getDailyGenerationContextAdmin, getPushTokenAdmin, listGrantedUserIds, logCronRunAdmin, logGenerationAdmin, saveDailyLessonAdmin } from "@/lib/firebase-admin";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
+import { sendBadgePush } from "@/lib/push";
 import { DAILY_TOKEN_LIMIT, getTokensUsedToday, reportTokensUsed } from "@/lib/token-budget";
 import type { CronRunResult, Lesson } from "@/lib/types";
 
@@ -40,8 +41,23 @@ async function tokenLimitReached(): Promise<boolean> {
 }
 
 /**
+ * Badges the mobile app's icon for a freshly generated lesson, so it's visible
+ * without opening the app. Best-effort: no registered device, or a failed
+ * push (e.g. a stale token), never fails the lesson generation itself.
+ */
+async function notifyMobileBadge(uid: string): Promise<void> {
+  const pushToken = await getPushTokenAdmin(uid).catch((err) => {
+    console.error(`Failed to look up push token for ${uid}`, err);
+    return null;
+  });
+  if (!pushToken) return;
+  await sendBadgePush(pushToken.token, 1).catch((err) => console.error(`Failed to send badge push for ${uid}`, err));
+}
+
+/**
  * Pre-generates today's lesson for every user with granted access, so it's
- * ready before they open the app. Retries a user's generation (the research
+ * ready before they open the app, and badges the mobile app's icon for
+ * anyone with a registered device. Retries a user's generation (the research
  * + draft + source-review pipeline can fail transiently, e.g. a rejected
  * draft) up to MAX_ATTEMPTS_PER_USER times, but the whole run stops early
  * once the shared daily token budget is exhausted.
@@ -104,6 +120,7 @@ export async function POST(request: Request) {
       generated = await attachLessonAudio(`lesson-audio/${uid}/${date}.mp3`, generated);
       await saveDailyLessonAdmin(uid, date, generated, context.history);
       await logGenerationAdmin(uid, generated.title).catch((err) => console.error(`Failed to log lesson generation for ${uid}`, err));
+      await notifyMobileBadge(uid);
       results.push({ uid, status: "generated" });
     } else if (!stoppedForTokenLimit) {
       results.push({ uid, status: "failed", error: lastError instanceof Error ? lastError.message : "Unknown error" });

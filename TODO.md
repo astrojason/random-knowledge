@@ -7,6 +7,7 @@
 - [ ] Decide on `@types/react` in apps/mobile: pinned to exact `19.2.4` because `19.2.18` broke all React Native JSX typing (`'View' cannot be used as a JSX component`, TS2786) with `react-native@0.86.3` + `typescript@6.0.3`; re-test with newer patches before loosening the pin
 - [ ] Add cloned-voice narration (ReadAloudButton) and the superadmin admin screen to apps/mobile — skipped for MVP, web-only for now
 - [ ] Add Android support to apps/mobile if desired (app.json already has a package id and adaptive icon placeholders, but Android sign-in/build hasn't been set up or tested)
+- [ ] Verify the app-icon badge push (`registerPushToken`, the cron's `notifyMobileBadge`) end-to-end on a real device: needs a fresh `eas build` so the new `expo-notifications` plugin/entitlements are included, EAS to provision the APNs push key on that build (it should prompt for this), notification permission actually granted on the device, and confirming the badge appears after the daily cron runs without opening the app
 
 ## Ship apps/mobile as an Unlisted App Store app
 

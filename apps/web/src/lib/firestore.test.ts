@@ -13,7 +13,7 @@ vi.mock("firebase/firestore", () => ({
 }));
 
 import { deleteDoc, doc, getDoc, getDocs, runTransaction, setDoc } from "firebase/firestore";
-import { addToStash, completeDailyLesson, createShare, getLesson, getShare, getStash, removeFromStash, getSelectedCategories, setLesson, setSelectedCategories } from "./firestore";
+import { addToStash, completeDailyLesson, createShare, getLesson, getShare, getStash, removeFromStash, getSelectedCategories, setLesson, setPushToken, setSelectedCategories } from "./firestore";
 import type { Lesson } from "./types";
 
 /** Firestore's setDoc() rejects any value where an array directly contains another array. */
@@ -57,6 +57,16 @@ describe("category preferences", () => {
   it("does not overwrite preferences with an empty selection", async () => {
     await expect(setSelectedCategories("user-a", [])).rejects.toThrow("Choose at least one category.");
     expect(setDoc).not.toHaveBeenCalled();
+  });
+});
+
+describe("push token registration", () => {
+  it("saves the device's Expo push token under the user's meta doc", async () => {
+    await setPushToken("user-a", "ExponentPushToken[abc]", "ios");
+    expect(setDoc).toHaveBeenCalledWith(
+      "users/user-a/meta/pushToken",
+      expect.objectContaining({ token: "ExponentPushToken[abc]", platform: "ios" })
+    );
   });
 });
 

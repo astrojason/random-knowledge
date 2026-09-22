@@ -36,6 +36,13 @@ export interface StreakData {
   lastDate: string | null;
 }
 
+/** An Expo push token registered by the mobile app, so the server can badge the app icon without it being open. */
+export interface PushToken {
+  token: string;
+  platform: "ios" | "android";
+  updatedAt: string;
+}
+
 export interface HistoryEntry {
   date: string;
   category: CategoryKey;

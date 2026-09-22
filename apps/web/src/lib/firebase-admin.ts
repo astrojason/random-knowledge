@@ -6,7 +6,7 @@ import { getStorage } from "firebase-admin/storage";
 import type { AccessRequest } from "@/lib/auth-guard";
 import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from "@/lib/categories";
 import { fromFirestoreLesson, toFirestoreLesson } from "@/lib/lesson-storage";
-import type { CronRunLogEntry, CronRunResult, GenerationLogEntry, HistoryEntry, Lesson, SharePreview } from "@/lib/types";
+import type { CronRunLogEntry, CronRunResult, GenerationLogEntry, HistoryEntry, Lesson, PushToken, SharePreview } from "@/lib/types";
 
 const STORAGE_BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
@@ -65,6 +65,12 @@ export async function getDailyGenerationContextAdmin(uid: string, date: string):
     history: historySnap.exists ? (historySnap.data()?.entries as HistoryEntry[]) : [],
     selectedCategories: selected.length ? selected : CATEGORY_KEYS,
   };
+}
+
+/** The mobile device (if any) registered to receive a badge push when this user's lesson is ready. */
+export async function getPushTokenAdmin(uid: string): Promise<PushToken | null> {
+  const snap = await getFirestore(getAdminApp()).collection("users").doc(uid).collection("meta").doc("pushToken").get();
+  return snap.exists ? (snap.data() as PushToken) : null;
 }
 
 /**

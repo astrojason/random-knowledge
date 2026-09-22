@@ -3,6 +3,7 @@ import { POST } from "./route";
 import { defaultWeights } from "@/lib/categories";
 import {
   getDailyGenerationContextAdmin,
+  getPushTokenAdmin,
   listGrantedUserIds,
   logCronRunAdmin,
   logGenerationAdmin,
@@ -10,17 +11,20 @@ import {
 } from "@/lib/firebase-admin";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
+import { sendBadgePush } from "@/lib/push";
 import type { Lesson } from "@/lib/types";
 
 vi.mock("@/lib/firebase-admin", () => ({
   listGrantedUserIds: vi.fn(),
   getDailyGenerationContextAdmin: vi.fn(),
+  getPushTokenAdmin: vi.fn(),
   saveDailyLessonAdmin: vi.fn(),
   logGenerationAdmin: vi.fn(),
   logCronRunAdmin: vi.fn(),
 }));
 vi.mock("@/lib/lesson-audio", () => ({ attachLessonAudio: vi.fn() }));
 vi.mock("@/lib/lesson-generation", () => ({ generateSourcedLesson: vi.fn() }));
+vi.mock("@/lib/push", () => ({ sendBadgePush: vi.fn() }));
 vi.mock("openai", () => ({ default: class OpenAI {} }));
 
 const emptyContext = { existingLesson: null, weights: defaultWeights(), history: [], selectedCategories: ["nature" as const] };
@@ -40,6 +44,8 @@ beforeEach(() => {
   vi.mocked(attachLessonAudio).mockImplementation(async (_path, l) => l);
   vi.mocked(logGenerationAdmin).mockResolvedValue(undefined);
   vi.mocked(logCronRunAdmin).mockResolvedValue(undefined);
+  vi.mocked(getPushTokenAdmin).mockResolvedValue(null);
+  vi.mocked(sendBadgePush).mockResolvedValue(undefined);
 });
 
 it("rejects requests without the cron secret configured", async () => {
@@ -89,6 +95,30 @@ it("synthesizes narration for the generated lesson before saving it", async () =
     { category: "nature", ...lesson, audioUrl: "https://storage.example/lesson.mp3" },
     []
   );
+});
+
+it("badges the mobile app for a user with a registered device", async () => {
+  vi.mocked(getPushTokenAdmin).mockResolvedValue({ token: "ExponentPushToken[abc]", platform: "ios", updatedAt: "2026-09-01" });
+  const response = await POST(request());
+  const body = await response.json();
+  expect(body.results).toEqual([{ uid: "alice", status: "generated" }]);
+  expect(sendBadgePush).toHaveBeenCalledWith("ExponentPushToken[abc]", 1);
+});
+
+it("does not send a push for a user with no registered device", async () => {
+  const response = await POST(request());
+  await response.json();
+  expect(sendBadgePush).not.toHaveBeenCalled();
+});
+
+it("still reports the lesson as generated when the badge push fails", async () => {
+  vi.mocked(getPushTokenAdmin).mockResolvedValue({ token: "stale-token", platform: "ios", updatedAt: "2026-09-01" });
+  vi.mocked(sendBadgePush).mockRejectedValue(new Error("DeviceNotRegistered"));
+  const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  const response = await POST(request());
+  const body = await response.json();
+  expect(body.results).toEqual([{ uid: "alice", status: "generated" }]);
+  expect(errorSpy).toHaveBeenCalled();
 });
 
 it("skips a user who already has today's lesson", async () => {

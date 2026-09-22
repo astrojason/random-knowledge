@@ -5,6 +5,7 @@ export const {
   getStreak,
   getWeights,
   setWeights,
+  setPushToken,
   getSelectedCategories,
   setSelectedCategories,
   getHistory,

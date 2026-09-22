@@ -4,7 +4,7 @@ import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from ".
 import type { AccessRequest } from "./auth-guard";
 import { todayStr } from "./date";
 import { fromFirestoreLesson, toFirestoreLesson } from "./lesson-storage";
-import type { CronRunLogEntry, DailyProgress, GenerationLogEntry, HistoryEntry, Lesson, SharedLesson, StashEntry, StreakData } from "./types";
+import type { CronRunLogEntry, DailyProgress, GenerationLogEntry, HistoryEntry, Lesson, PushToken, SharedLesson, StashEntry, StreakData } from "./types";
 import { advanceStreak } from "./streak";
 
 const DEFAULT_STREAK: StreakData = { streak: 0, longest: 0, lastDate: null };
@@ -28,6 +28,12 @@ export function createFirestoreApi(db: Firestore) {
 
   async function setWeights(uid: string, weights: Weights): Promise<void> {
     await setDoc(doc(db, "users", uid, "meta", "weights"), weights);
+  }
+
+  /** Registers (or refreshes) the device that should get a badge-only push when today's lesson is ready. */
+  async function setPushToken(uid: string, token: string, platform: PushToken["platform"]): Promise<void> {
+    const data: PushToken = { token, platform, updatedAt: new Date().toISOString() };
+    await setDoc(doc(db, "users", uid, "meta", "pushToken"), data);
   }
 
   async function getSelectedCategories(uid: string): Promise<CategoryKey[] | null> {
@@ -252,6 +258,7 @@ export function createFirestoreApi(db: Firestore) {
     getStreak,
     getWeights,
     setWeights,
+    setPushToken,
     getSelectedCategories,
     setSelectedCategories,
     getHistory,

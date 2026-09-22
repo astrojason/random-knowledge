@@ -33,6 +33,12 @@
       "expo-apple-authentication",
       "expo-dev-client",
       [
+        "expo-notifications",
+        {
+          "enableBackgroundRemoteNotifications": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
