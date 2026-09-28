@@ -1,0 +1,20 @@
+name: Screenshots
+options:
+  bundleIdPrefix: com.astrojason.screenshots
+targets:
+  ScreenshotUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources: [Sources]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.astrojason.screenshots.uitests
+schemes:
+  Screenshots:
+    build:
+      targets:
+        ScreenshotUITests: [test]
+    test:
+      targets: [ScreenshotUITests]
