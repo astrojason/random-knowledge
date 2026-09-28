@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LegalLayout, LegalList, LegalSection } from "@/components/legal/LegalLayout";
+import { CONTACT_EMAIL, LegalLayout, LegalList, LegalSection } from "@/components/legal/LegalLayout";
 
 export const metadata: Metadata = {
   title: "Terms of Service — Random Knowledge",
@@ -7,7 +7,6 @@ export const metadata: Metadata = {
 };
 
 const EFFECTIVE_DATE = "September 9, 2026";
-const CONTACT_EMAIL = "jason@astrojason.com";
 
 export default function TermsOfServicePage() {
   return (
