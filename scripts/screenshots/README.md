@@ -13,6 +13,13 @@ simulator's native resolution (iPhone 17 Pro Max = 1320x2868, the 6.9" App Store
 `run.sh` sets a clean 9:41 status bar, generates the Xcode project with `xcodegen`, runs the test
 and clears the status bar. Credentials are only passed through the environment; never commit them.
 
+## App preview video
+
+`APP_BUNDLE_ID=... DEMO_EMAIL=... DEMO_PASSWORD=... scripts/screenshots/record.sh <out.mp4> RandomKnowledgePreviewTests`
+builds the test, records the simulator with `simctl io recordVideo` while the paced flow runs, then
+trims and encodes to H.264 1320x2868 @ 30fps with a silent audio track. Apple wants 15-30s.
+Set `TRIM_START` (seconds) if the test runner's launch shows at the start.
+
 ## Adding an app
 
 Add `Sources/<App>Tests.swift` with a `ScreenshotTestCase` subclass: use `tap("Label")`,
