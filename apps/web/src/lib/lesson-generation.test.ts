@@ -85,6 +85,61 @@ describe("source-backed lesson generation", () => {
   });
 });
 
+describe("finding a second publisher", () => {
+  const cite = (url: string, title: string) => ({ type: "url_citation", url, title });
+  const researchWith = (text: string, ...citations: ReturnType<typeof cite>[]) => ({
+    status: "completed", output_text: text, usage: { total_tokens: 100 },
+    output: [{ type: "web_search_call", status: "completed" }, { type: "message", content: [{ type: "output_text", annotations: citations }] }],
+  });
+
+  it("does not search again when two publishers already back the research", async () => {
+    const f = fixture();
+    await f.generate();
+    expect(f.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("searches again for an independent source when research rests on one publisher, and merges the results", async () => {
+    const f = fixture();
+    f.search
+      .mockResolvedValueOnce(researchWith("First-pass notes.", cite("https://museum.example/topic", "Museum")))
+      .mockResolvedValueOnce(researchWith("Second-pass notes.", cite("https://university.example/topic", "University")));
+    const lesson = await f.generate();
+    expect(f.search).toHaveBeenCalledTimes(2);
+    expect(f.search.mock.calls[1][0]).toMatchObject({ model: "researcher", tool_choice: "required", tools: [{ type: "web_search" }] });
+    expect(f.search.mock.calls[1][0].input).toContain("First-pass notes.");
+    expect(f.search.mock.calls[1][0].input).toContain("https://museum.example/topic");
+    expect(lesson.sources?.map((s) => s.url)).toEqual(["https://museum.example/topic", "https://university.example/topic"]);
+    expect(f.chat.mock.calls[0][0].messages[1].content).toContain("Second-pass notes.");
+    expect(f.onTokens.mock.calls.map(([count]) => count)).toEqual([100, 100, 50, 50]);
+  });
+
+  it("counts subdomains of one publisher as a single source", async () => {
+    const f = fixture();
+    f.search
+      .mockResolvedValueOnce(researchWith("Notes.", cite("https://en.wikipedia.org/wiki/A", "A"), cite("https://simple.wikipedia.org/wiki/A", "A simple")))
+      .mockResolvedValueOnce(researchWith("More.", cite("https://university.example/topic", "University")));
+    f.draft.paragraphSources = [[1], [3], [1, 3]];
+    await f.generate();
+    expect(f.search).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up without drafting when the follow-up still finds only one publisher", async () => {
+    const f = fixture();
+    f.search.mockResolvedValue(researchWith("Notes.", cite("https://museum.example/topic", "Museum")));
+    await expect(f.generate()).rejects.toThrow(/corroborating/i);
+    expect(f.search).toHaveBeenCalledTimes(2);
+    expect(f.chat).not.toHaveBeenCalled();
+    expect(f.onTokens.mock.calls.map(([count]) => count)).toEqual([100, 100]);
+  });
+
+  it("requires the lesson itself to reference two publishers, not two subdomains of one", async () => {
+    const f = fixture();
+    f.search.mockResolvedValue(researchWith("Notes.", cite("https://en.wikipedia.org/wiki/A", "A"), cite("https://university.example/x", "U"), cite("https://simple.wikipedia.org/wiki/A", "S")));
+    f.draft.paragraphSources = [[1], [3], [1, 3]];
+    await expect(f.generate()).rejects.toThrow(/corroborating/i);
+  });
+});
+
 describe("lesson validation boundaries", () => {
   it.each([
     { title: "x".repeat(60) },
