@@ -22,4 +22,5 @@ export const {
   listGenerationLog,
   createShare,
   resetAllUserData,
+  deleteAccountData,
 } = createFirestoreApi(db);

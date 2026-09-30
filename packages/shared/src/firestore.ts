@@ -254,6 +254,18 @@ export function createFirestoreApi(db: Firestore) {
     ]);
   }
 
+  /**
+   * Deletes everything stored about a user: the shares/ snapshots they created (not just the pointers to
+   * them), all of users/{uid}, and their access request last, so a failure part-way can be retried.
+   */
+  async function deleteAccountData(uid: string): Promise<void> {
+    const pointers = await getDocs(collection(db, "users", uid, "shares"));
+    await Promise.all(pointers.docs.map((d) => deleteDoc(doc(db, "shares", d.data().shareId as string))));
+    await resetAllUserData(uid);
+    await deleteDoc(doc(db, "users", uid, "meta", "pushToken"));
+    await deleteDoc(doc(db, "accessRequests", uid));
+  }
+
   return {
     getStreak,
     getWeights,
@@ -281,6 +293,7 @@ export function createFirestoreApi(db: Firestore) {
     getStash,
     removeFromStash,
     resetAllUserData,
+    deleteAccountData,
   };
 }
 

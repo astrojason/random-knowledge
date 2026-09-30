@@ -8,14 +8,19 @@ GoogleSignin.configure({
   iosClientId: "900940305507-vo39nj40o999uqiefubod9vt6k9eelgp.apps.googleusercontent.com",
 });
 
-/** Returns null if the user cancelled the native Google sign-in sheet. */
-export async function signInWithGoogle() {
+/** Shows the native Google sheet and returns a Firebase credential. Null if the user cancelled it. */
+export async function requestGoogleCredential() {
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: false }).catch(() => undefined);
   const response = await GoogleSignin.signIn();
   if (response.type !== "success") return null;
   const { idToken } = response.data;
   if (!idToken) throw new Error("Google sign-in did not return an ID token.");
-  const credential = GoogleAuthProvider.credential(idToken);
-  await signInWithCredential(auth, credential);
+  return GoogleAuthProvider.credential(idToken);
+}
+
+/** Returns null if the user cancelled the native Google sign-in sheet. */
+export async function signInWithGoogle() {
+  const credential = await requestGoogleCredential();
+  if (credential) await signInWithCredential(auth, credential);
   return null;
 }

@@ -18,6 +18,9 @@ service cloud.firestore {
         && request.resource.data.uid == uid
         && request.resource.data.status == "pending";
 
+      // ...delete it when they delete their account...
+      allow delete: if request.auth != null && request.auth.uid == uid;
+
       // ...and refresh it on repeat visits, but never change its own status.
       allow update: if request.auth != null && request.auth.uid == uid
         && request.resource.data.status == resource.data.status

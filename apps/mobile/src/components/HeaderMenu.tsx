@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { SymbolView } from "expo-symbols";
 import { useTheme } from "../lib/theme";
+import { DeleteAccountLink } from "./DeleteAccountLink";
 import { LinkText } from "./ui";
 
 const PANEL_WIDTH = 280;
@@ -63,6 +64,11 @@ export function HeaderMenu({
                 />
               </View>
             )}
+
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: theme.fgMuted }]}>Account</Text>
+              <DeleteAccountLink />
+            </View>
           </Animated.View>
           <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Close menu" />
         </View>
@@ -81,6 +87,6 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   panelHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
-  section: { marginTop: 4 },
+  section: { marginTop: 20 },
   sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5, marginBottom: 10, textTransform: "uppercase" },
 });
