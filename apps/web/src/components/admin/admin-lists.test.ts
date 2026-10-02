@@ -4,9 +4,10 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessRequest } from "@/lib/auth-guard";
-import type { CronRunLogEntry } from "@/lib/types";
+import type { CronRunLogEntry, GenerationLogEntry } from "@/lib/types";
 import { AdminAccessList } from "./AdminAccessList";
 import { CronRunLog } from "./CronRunLog";
+import { GenerationLog } from "./GenerationLog";
 
 const person = (uid: string, status: AccessRequest["status"], autoGeneration?: boolean): AccessRequest => ({
   uid, email: `${uid}@example.com`, displayName: uid, status, firstSeenAt: "2026-09-01", lastSeenAt: "2026-09-01",
@@ -68,5 +69,27 @@ describe("cron run log", () => {
   it("shows why a run quit early", async () => {
     await render([entry({ error: "OpenAI has no credits remaining: 429 You have no credits remaining." })]);
     expect(container.textContent).toContain("OpenAI has no credits remaining");
+  });
+});
+
+describe("generation log", () => {
+  const entry = (overrides: Partial<GenerationLogEntry>): GenerationLogEntry => ({
+    uid: "alice", title: "A lesson", createdAt: "2026-10-02T07:00:00.000Z", ...overrides,
+  });
+  const render = (entries: GenerationLogEntry[]) => act(async () => root.render(createElement(GenerationLog, { entries, requests: [] })));
+
+  it("says a lesson was generated automatically by the nightly job", async () => {
+    await render([entry({ source: "auto" })]);
+    expect(container.textContent).toContain("Auto-generated");
+  });
+
+  it("says a lesson was generated when the user opened the page", async () => {
+    await render([entry({ source: "on-access" })]);
+    expect(container.textContent).toContain("Generated on page access");
+  });
+
+  it("doesn't guess for older entries logged before the source was recorded", async () => {
+    await render([entry({})]);
+    expect(container.textContent).not.toMatch(/Auto-generated|Generated on page access/);
   });
 });

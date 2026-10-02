@@ -76,7 +76,7 @@ it("logs the generation for admins after saving it", async () => {
   const response = await POST(request());
   const body = await response.json();
   expect(body.results).toEqual([{ uid: "alice", status: "generated" }]);
-  expect(logGenerationAdmin).toHaveBeenCalledWith("alice", "Verified lesson");
+  expect(logGenerationAdmin).toHaveBeenCalledWith("alice", "Verified lesson", "auto");
 });
 
 it("still reports the lesson as generated when logging fails", async () => {

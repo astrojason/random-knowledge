@@ -133,7 +133,7 @@ export async function POST(request: Request) {
       if (generated) {
         generated = await attachLessonAudio(`lesson-audio/${uid}/${date}.mp3`, generated);
         await saveDailyLessonAdmin(uid, date, generated, context.history);
-        await logGenerationAdmin(uid, generated.title).catch((err) => console.error(`Failed to log lesson generation for ${uid}`, err));
+        await logGenerationAdmin(uid, generated.title, "auto").catch((err) => console.error(`Failed to log lesson generation for ${uid}`, err));
         await notifyMobileBadge(uid);
         results.push({ uid, status: "generated" });
       } else if (!stoppedForTokenLimit) {

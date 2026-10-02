@@ -58,10 +58,15 @@ export interface DailyProgress {
 }
 
 /** One row in the admin-visible log of lesson generations (src/lib/firebase-admin.ts's logGenerationAdmin). */
+/** What triggered a generation: the nightly cron ("auto") or the user opening the app ("on-access"). */
+export type GenerationSource = "auto" | "on-access";
+
 export interface GenerationLogEntry {
   uid: string;
   title: string;
   createdAt: string;
+  /** Absent on entries logged before the source was recorded. */
+  source?: GenerationSource;
 }
 
 /** One user's outcome within a daily-lesson cron run (src/app/api/cron/generate-daily-lesson/route.ts). */

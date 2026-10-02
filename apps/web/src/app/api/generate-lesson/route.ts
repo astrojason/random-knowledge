@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { getAccessRequestAdmin, logGenerationAdmin, verifyIdToken } from "@/lib/firebase-admin";
+import { getAccessRequestAdmin, hasLessonHistoryAdmin, logGenerationAdmin, verifyIdToken } from "@/lib/firebase-admin";
 import { hasAppAccess, isSuperadmin, resolveAccess } from "@/lib/auth-guard";
 import { CATEGORIES, type CategoryKey } from "@/lib/categories";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
+import { autoGenerationEnabled } from "@/lib/paused-generation";
 import { DAILY_TOKEN_LIMIT, getTokensUsedToday, reportTokensUsed } from "@/lib/token-budget";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,10 @@ async function authorizeRequest(request: Request): Promise<NextResponse | { uid:
   const accessRequest = isSuperadmin(claims) ? null : await getAccessRequestAdmin(decoded.uid);
   if (!hasAppAccess(resolveAccess(decoded.uid, claims, accessRequest))) {
     return NextResponse.json({ error: "Access not granted for this account" }, { status: 403 });
+  }
+  // A superadmin turned auto generation off: they keep their last lesson. Someone with no lesson yet still gets a first one.
+  if (!autoGenerationEnabled(accessRequest) && (await hasLessonHistoryAdmin(decoded.uid))) {
+    return NextResponse.json({ error: "Auto generation is turned off for this account" }, { status: 403 });
   }
 
   return { uid: decoded.uid };
@@ -81,7 +86,7 @@ export async function POST(request: Request) {
       onTokens: reportTokensUsed,
     });
     const lesson = await attachLessonAudio(`lesson-audio/${uid}/${Date.now()}.mp3`, { category, ...generated });
-    await logGenerationAdmin(uid, lesson.title).catch((err) => console.error("Failed to log lesson generation", err));
+    await logGenerationAdmin(uid, lesson.title, "on-access").catch((err) => console.error("Failed to log lesson generation", err));
     return NextResponse.json(lesson);
   } catch (err) {
     console.error("Source-backed lesson generation failed", err);

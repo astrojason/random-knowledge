@@ -1,10 +1,10 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
-import { getAccessRequestAdmin, logGenerationAdmin, verifyIdToken } from "@/lib/firebase-admin";
+import { getAccessRequestAdmin, hasLessonHistoryAdmin, logGenerationAdmin, verifyIdToken } from "@/lib/firebase-admin";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
 
-vi.mock("@/lib/firebase-admin", () => ({ getAccessRequestAdmin: vi.fn(), verifyIdToken: vi.fn(), logGenerationAdmin: vi.fn() }));
+vi.mock("@/lib/firebase-admin", () => ({ getAccessRequestAdmin: vi.fn(), hasLessonHistoryAdmin: vi.fn(), verifyIdToken: vi.fn(), logGenerationAdmin: vi.fn() }));
 vi.mock("@/lib/lesson-audio", () => ({ attachLessonAudio: vi.fn() }));
 vi.mock("@/lib/lesson-generation", () => ({ generateSourcedLesson: vi.fn() }));
 vi.mock("openai", () => ({ default: class OpenAI {} }));
@@ -39,6 +39,36 @@ it("requires granted access for non-admin users", async () => {
   expect((await POST(request())).status).toBe(403);
 });
 
+describe("users with auto generation turned off", () => {
+  const paused = { uid: "reader", email: null, displayName: null, status: "granted", firstSeenAt: "2026-09-01", lastSeenAt: "2026-09-01", autoGeneration: false } as const;
+
+  beforeEach(() => {
+    vi.mocked(verifyIdToken).mockResolvedValue({ uid: "reader" } as Awaited<ReturnType<typeof verifyIdToken>>);
+    vi.mocked(getAccessRequestAdmin).mockResolvedValue(paused);
+    vi.mocked(hasLessonHistoryAdmin).mockResolvedValue(true);
+  });
+
+  it("are refused a new lesson, even from a client that asks for one", async () => {
+    const response = await POST(request());
+    expect(response.status).toBe(403);
+    expect((await response.json()).error).toMatch(/auto generation/i);
+    expect(generateSourcedLesson).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("can still get a first lesson when they have never had one", async () => {
+    vi.mocked(hasLessonHistoryAdmin).mockResolvedValue(false);
+    expect((await POST(request())).status).toBe(200);
+    expect(generateSourcedLesson).toHaveBeenCalled();
+  });
+
+  it("are not affected when the flag is on or was never set", async () => {
+    vi.mocked(getAccessRequestAdmin).mockResolvedValue({ ...paused, autoGeneration: true });
+    expect((await POST(request())).status).toBe(200);
+    expect(hasLessonHistoryAdmin).not.toHaveBeenCalled();
+  });
+});
+
 it.each([null, {}, { category: "invented" }])("rejects invalid lesson requests: %j", async (body) => {
   expect((await POST(request(body))).status).toBe(400);
   expect(generateSourcedLesson).not.toHaveBeenCalled();
@@ -69,7 +99,7 @@ it("synthesizes narration for the generated lesson before responding", async () 
 
 it("logs the generation for admins before responding", async () => {
   await POST(request());
-  expect(logGenerationAdmin).toHaveBeenCalledWith("reader", "Verified lesson");
+  expect(logGenerationAdmin).toHaveBeenCalledWith("reader", "Verified lesson", "on-access");
 });
 
 it("still returns the lesson when logging fails", async () => {

@@ -6,7 +6,7 @@ import { getStorage } from "firebase-admin/storage";
 import type { AccessRequest } from "@/lib/auth-guard";
 import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from "@/lib/categories";
 import { fromFirestoreLesson, toFirestoreLesson } from "@/lib/lesson-storage";
-import type { CronRunLogEntry, CronRunResult, GenerationLogEntry, HistoryEntry, Lesson, PushToken, SharePreview } from "@/lib/types";
+import type { CronRunLogEntry, CronRunResult, GenerationLogEntry, GenerationSource, HistoryEntry, Lesson, PushToken, SharePreview } from "@/lib/types";
 
 const STORAGE_BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
@@ -32,6 +32,13 @@ export async function verifyIdToken(idToken: string) {
 export async function getAccessRequestAdmin(uid: string): Promise<AccessRequest | null> {
   const snap = await getFirestore(getAdminApp()).collection("accessRequests").doc(uid).get();
   return snap.exists ? (snap.data() as AccessRequest) : null;
+}
+
+/** Whether the user has ever had a lesson generated (their history is non-empty). */
+export async function hasLessonHistoryAdmin(uid: string): Promise<boolean> {
+  const snap = await getFirestore(getAdminApp()).collection("users").doc(uid).collection("meta").doc("history").get();
+  const entries: unknown = snap.exists ? snap.data()?.entries : null;
+  return Array.isArray(entries) && entries.length > 0;
 }
 
 /** Every account currently granted app access, for jobs run without a signed-in user (e.g. the daily-lesson cron). */
@@ -97,8 +104,8 @@ export async function uploadLessonAudioAdmin(path: string, audio: Uint8Array): P
 }
 
 /** Records a generation event for the admin-visible generation log (see GenerationLog). */
-export async function logGenerationAdmin(uid: string, title: string): Promise<void> {
-  const entry: GenerationLogEntry = { uid, title, createdAt: new Date().toISOString() };
+export async function logGenerationAdmin(uid: string, title: string, source: GenerationSource): Promise<void> {
+  const entry: GenerationLogEntry = { uid, title, source, createdAt: new Date().toISOString() };
   await getFirestore(getAdminApp()).collection("generationLog").add(entry);
 }
 
