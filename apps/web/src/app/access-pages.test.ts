@@ -8,7 +8,7 @@ import { useAccessStatus } from "@/lib/useAccessStatus";
 
 vi.mock("@/lib/auth-context", () => ({ useAuth: vi.fn() }));
 vi.mock("@/lib/useAccessStatus", () => ({ useAccessStatus: vi.fn() }));
-vi.mock("@/lib/firestore", () => ({ grantAccess: vi.fn(), listAccessRequests: vi.fn(), revokeAccess: vi.fn() }));
+vi.mock("@/lib/firestore", () => ({ grantAccess: vi.fn(), listAccessRequests: vi.fn(), revokeAccess: vi.fn(), setAutoGeneration: vi.fn() }));
 vi.mock("@/components/lesson/DailyLesson", () => ({ DailyLesson: () => "Daily lesson" }));
 vi.mock("@/components/LandingPage", () => ({ LandingPage: () => "Public landing page" }));
 

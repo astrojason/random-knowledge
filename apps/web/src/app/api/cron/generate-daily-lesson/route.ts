@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { pickCategory } from "@/lib/categories";
 import { todayStr } from "@/lib/date";
-import { getDailyGenerationContextAdmin, getPushTokenAdmin, listGrantedUserIds, logCronRunAdmin, logGenerationAdmin, saveDailyLessonAdmin } from "@/lib/firebase-admin";
+import { getDailyGenerationContextAdmin, getPushTokenAdmin, listGrantedUserIds, listPausedUserIds, logCronRunAdmin, logGenerationAdmin, saveDailyLessonAdmin } from "@/lib/firebase-admin";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
+import { isOutOfCredits } from "@/lib/openai-errors";
 import { sendBadgePush } from "@/lib/push";
-import { DAILY_TOKEN_LIMIT, getTokensUsedToday, reportTokensUsed } from "@/lib/token-budget";
+import { DAILY_TOKEN_LIMIT, getTokensUsedToday, reportTokensUsed, TokenTrackerError } from "@/lib/token-budget";
 import type { CronRunResult, Lesson } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,9 @@ export const dynamic = "force-dynamic";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const OPENAI_RESEARCH_MODEL = process.env.OPENAI_RESEARCH_MODEL || "gpt-4.1";
 const MAX_ATTEMPTS_PER_USER = 3;
+
+/** Something outside any one user's lesson (OpenAI credits, the token tracker) stopped the whole run. */
+class RunStopped extends Error {}
 
 // Constructed lazily (not at module load) since OPENAI_API_KEY is only
 // available at runtime, not during the build's page-data collection step.
@@ -35,9 +39,9 @@ function authorizeRequest(request: Request): NextResponse | null {
   return null;
 }
 
+/** Throws TokenTrackerError when usage can't be read: an unenforceable budget stops the run rather than being assumed unspent. */
 async function tokenLimitReached(): Promise<boolean> {
-  const used = await getTokensUsedToday().catch(() => 0);
-  return used >= DAILY_TOKEN_LIMIT;
+  return (await getTokensUsedToday()) >= DAILY_TOKEN_LIMIT;
 }
 
 /**
@@ -73,61 +77,78 @@ export async function POST(request: Request) {
   if (denied) return denied;
 
   const date = todayStr("UTC");
-  const uids = await listGrantedUserIds();
+  const [uids, pausedUids] = await Promise.all([listGrantedUserIds(), listPausedUserIds().then((ids) => new Set(ids))]);
   const results: CronRunResult[] = [];
   let stoppedForTokenLimit = false;
 
-  for (const uid of uids) {
-    if (await tokenLimitReached()) {
-      stoppedForTokenLimit = true;
-      break;
-    }
+  let stopReason: string | null = null;
 
-    const context = await getDailyGenerationContextAdmin(uid, date);
-    if (context.existingLesson) {
-      results.push({ uid, status: "already-had-lesson" });
-      continue;
-    }
+  try {
+    for (const uid of uids) {
+      if (pausedUids.has(uid)) {
+        results.push({ uid, status: "auto-generation-off" });
+        continue;
+      }
 
-    const recentCats = context.history.slice(-2).map((entry) => entry.category);
-    const category = pickCategory(context.weights, recentCats, context.selectedCategories);
-    const recentTitles = context.history.slice(-12).map((entry) => entry.title);
-
-    let generated: Lesson | null = null;
-    let lastError: unknown;
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_USER; attempt++) {
       if (await tokenLimitReached()) {
         stoppedForTokenLimit = true;
         break;
       }
-      try {
-        const lesson = await generateSourcedLesson(getOpenAI(), {
-          category,
-          recentTitles,
-          model: OPENAI_MODEL,
-          researchModel: OPENAI_RESEARCH_MODEL,
-          onTokens: reportTokensUsed,
-        });
-        generated = { category, ...lesson };
-        break;
-      } catch (err) {
-        lastError = err;
-        console.error(`Daily-lesson cron: attempt ${attempt} failed for user ${uid}`, err);
+
+      const context = await getDailyGenerationContextAdmin(uid, date);
+      if (context.existingLesson) {
+        results.push({ uid, status: "already-had-lesson" });
+        continue;
+      }
+
+      const recentCats = context.history.slice(-2).map((entry) => entry.category);
+      const category = pickCategory(context.weights, recentCats, context.selectedCategories);
+      const recentTitles = context.history.slice(-12).map((entry) => entry.title);
+
+      let generated: Lesson | null = null;
+      let lastError: unknown;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_USER; attempt++) {
+        if (await tokenLimitReached()) {
+          stoppedForTokenLimit = true;
+          break;
+        }
+        try {
+          const lesson = await generateSourcedLesson(getOpenAI(), {
+            category,
+            recentTitles,
+            model: OPENAI_MODEL,
+            researchModel: OPENAI_RESEARCH_MODEL,
+            onTokens: reportTokensUsed,
+          });
+          generated = { category, ...lesson };
+          break;
+        } catch (err) {
+          // Retrying (or moving on to the next user) can't help until someone adds credits.
+          if (isOutOfCredits(err)) throw new RunStopped(`OpenAI has no credits remaining: ${(err as Error).message}`);
+          lastError = err;
+          console.error(`Daily-lesson cron: attempt ${attempt} failed for user ${uid}`, err);
+        }
+      }
+
+      if (generated) {
+        generated = await attachLessonAudio(`lesson-audio/${uid}/${date}.mp3`, generated);
+        await saveDailyLessonAdmin(uid, date, generated, context.history);
+        await logGenerationAdmin(uid, generated.title).catch((err) => console.error(`Failed to log lesson generation for ${uid}`, err));
+        await notifyMobileBadge(uid);
+        results.push({ uid, status: "generated" });
+      } else if (!stoppedForTokenLimit) {
+        results.push({ uid, status: "failed", error: lastError instanceof Error ? lastError.message : "Unknown error" });
       }
     }
-
-    if (generated) {
-      generated = await attachLessonAudio(`lesson-audio/${uid}/${date}.mp3`, generated);
-      await saveDailyLessonAdmin(uid, date, generated, context.history);
-      await logGenerationAdmin(uid, generated.title).catch((err) => console.error(`Failed to log lesson generation for ${uid}`, err));
-      await notifyMobileBadge(uid);
-      results.push({ uid, status: "generated" });
-    } else if (!stoppedForTokenLimit) {
-      results.push({ uid, status: "failed", error: lastError instanceof Error ? lastError.message : "Unknown error" });
-    }
+  } catch (err) {
+    if (!(err instanceof TokenTrackerError || err instanceof RunStopped)) throw err;
+    console.error("Daily-lesson cron: quitting the run", err);
+    stopReason = err.message;
   }
 
-  await logCronRunAdmin(date, stoppedForTokenLimit, results).catch((err) => console.error("Failed to log the cron run", err));
+  await logCronRunAdmin(date, stoppedForTokenLimit, results, stopReason ?? undefined).catch((err) => console.error("Failed to log the cron run", err));
 
+  // A non-2xx response shows the quit as a failed attempt in Cloud Scheduler's logs.
+  if (stopReason) return NextResponse.json({ date, error: stopReason, stoppedForTokenLimit, results }, { status: 503 });
   return NextResponse.json({ date, stoppedForTokenLimit, results });
 }

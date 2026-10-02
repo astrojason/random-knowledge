@@ -40,6 +40,13 @@ export async function listGrantedUserIds(): Promise<string[]> {
   return snap.docs.map((d) => d.id);
 }
 
+/** Granted accounts a superadmin has paused auto generation for; the cron skips them and they keep seeing their last lesson. */
+export async function listPausedUserIds(): Promise<string[]> {
+  const snap = await getFirestore(getAdminApp()).collection("accessRequests")
+    .where("status", "==", "granted").where("autoGeneration", "==", false).get();
+  return snap.docs.map((d) => d.id);
+}
+
 export interface DailyGenerationContext {
   existingLesson: Lesson | null;
   weights: Weights;
@@ -96,8 +103,8 @@ export async function logGenerationAdmin(uid: string, title: string): Promise<vo
 }
 
 /** Records a full daily-lesson cron run, including per-user failures, for the admin-visible run log (see CronRunLog). */
-export async function logCronRunAdmin(date: string, stoppedForTokenLimit: boolean, results: CronRunResult[]): Promise<void> {
-  const entry: CronRunLogEntry = { date, stoppedForTokenLimit, results, createdAt: new Date().toISOString() };
+export async function logCronRunAdmin(date: string, stoppedForTokenLimit: boolean, results: CronRunResult[], error?: string): Promise<void> {
+  const entry: CronRunLogEntry = { date, stoppedForTokenLimit, results, createdAt: new Date().toISOString(), ...(error && { error }) };
   await getFirestore(getAdminApp()).collection("cronRunLog").add(entry);
 }
 

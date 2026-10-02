@@ -67,7 +67,7 @@ export interface GenerationLogEntry {
 /** One user's outcome within a daily-lesson cron run (src/app/api/cron/generate-daily-lesson/route.ts). */
 export interface CronRunResult {
   uid: string;
-  status: "generated" | "already-had-lesson" | "failed";
+  status: "generated" | "already-had-lesson" | "auto-generation-off" | "failed";
   error?: string;
 }
 
@@ -76,6 +76,8 @@ export interface CronRunLogEntry {
   date: string;
   createdAt: string;
   stoppedForTokenLimit: boolean;
+  /** Set when the run quit early for a reason other than the token limit, e.g. the token tracker being unreachable. */
+  error?: string;
   results: CronRunResult[];
 }
 

@@ -16,15 +16,17 @@ service cloud.firestore {
       // ...create their own request as "pending"...
       allow create: if request.auth != null && request.auth.uid == uid
         && request.resource.data.uid == uid
-        && request.resource.data.status == "pending";
+        && request.resource.data.status == "pending"
+        && !('autoGeneration' in request.resource.data);
 
       // ...delete it when they delete their account...
       allow delete: if request.auth != null && request.auth.uid == uid;
 
-      // ...and refresh it on repeat visits, but never change its own status.
+      // ...and refresh it on repeat visits, but never change its own status or auto generation flag.
       allow update: if request.auth != null && request.auth.uid == uid
         && request.resource.data.status == resource.data.status
-        && request.resource.data.uid == uid;
+        && request.resource.data.uid == uid
+        && request.resource.data.get('autoGeneration', null) == resource.data.get('autoGeneration', null);
     }
 
     function hasAppAccess() {

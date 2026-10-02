@@ -19,6 +19,7 @@ export const {
   listAccessRequests,
   grantAccess,
   revokeAccess,
+  setAutoGeneration,
   listGenerationLog,
   listCronRunLog,
   createShare,

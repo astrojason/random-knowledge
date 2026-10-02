@@ -15,6 +15,7 @@ export function CronRunLog({ entries, requests }: { entries: CronRunLogEntry[]; 
         const failed = entry.results.filter((r) => r.status === "failed");
         const generated = entry.results.filter((r) => r.status === "generated").length;
         const alreadyHad = entry.results.filter((r) => r.status === "already-had-lesson").length;
+        const paused = entry.results.filter((r) => r.status === "auto-generation-off").length;
         return (
           <li
             key={`${entry.date}-${entry.createdAt}`}
@@ -25,9 +26,10 @@ export function CronRunLog({ entries, requests }: { entries: CronRunLogEntry[]; 
               <span className="text-xs text-fg-muted">{new Date(entry.createdAt).toLocaleString()}</span>
             </div>
             <p className="mt-1 text-xs text-fg-muted">
-              {generated} generated · {alreadyHad} already had a lesson · {failed.length} failed
+              {generated} generated · {alreadyHad} already had a lesson · {paused} auto generation off · {failed.length} failed
               {entry.stoppedForTokenLimit && " · stopped early (daily token limit reached)"}
             </p>
+            {entry.error && <p className="mt-1 text-xs text-rust">Run stopped: {entry.error}</p>}
             {failed.length > 0 && (
               <ul className="mt-2 flex flex-col gap-1">
                 {failed.map((result) => (

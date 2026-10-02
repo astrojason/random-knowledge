@@ -10,6 +10,8 @@ export interface AccessRequest {
   grantedAt?: string;
   grantedBy?: string;
   revokedAt?: string;
+  /** Set by a superadmin. Only an explicit `false` pauses nightly and on-demand generation for this user. */
+  autoGeneration?: boolean;
 }
 
 export type ResolvedAccess = "superadmin" | "granted" | "pending" | "revoked" | "denied";

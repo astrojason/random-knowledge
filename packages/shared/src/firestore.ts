@@ -146,6 +146,11 @@ export function createFirestoreApi(db: Firestore) {
     });
   }
 
+  /** Superadmin-only (enforced by firestore.rules). Off pauses nightly and on-demand generation: the user keeps seeing their last lesson. */
+  async function setAutoGeneration(uid: string, enabled: boolean): Promise<void> {
+    await updateDoc(doc(db, "accessRequests", uid), { autoGeneration: enabled });
+  }
+
   /** Superadmin-only (enforced by firestore.rules). */
   async function revokeAccess(uid: string): Promise<void> {
     await updateDoc(doc(db, "accessRequests", uid), {
@@ -284,6 +289,7 @@ export function createFirestoreApi(db: Firestore) {
     listAccessRequests,
     grantAccess,
     revokeAccess,
+    setAutoGeneration,
     listGenerationLog,
     listCronRunLog,
     createShare,

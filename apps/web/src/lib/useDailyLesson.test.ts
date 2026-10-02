@@ -10,7 +10,7 @@ import { defaultWeights } from "./categories";
 import type { Lesson } from "./types";
 
 vi.mock("./firestore", () => ({
-  appendHistory: vi.fn(), completeDailyLesson: vi.fn(), getHistory: vi.fn(), getLesson: vi.fn(),
+  appendHistory: vi.fn(), completeDailyLesson: vi.fn(), getAccessRequest: vi.fn(), getHistory: vi.fn(), getLesson: vi.fn(),
   getProgress: vi.fn(), getSelectedCategories: vi.fn(), getStreak: vi.fn(), getWeights: vi.fn(),
   resetAllUserData: vi.fn(), setLesson: vi.fn(), setSelectedCategories: vi.fn(), setWeights: vi.fn(),
 }));
@@ -43,6 +43,7 @@ beforeEach(() => {
   vi.mocked(store.getStreak).mockResolvedValue({ streak: 2, longest: 4, lastDate: null });
   vi.mocked(store.getWeights).mockResolvedValue(defaultWeights());
   vi.mocked(store.getHistory).mockResolvedValue([]);
+  vi.mocked(store.getAccessRequest).mockResolvedValue(null);
   vi.mocked(store.getProgress).mockResolvedValue(null);
   vi.mocked(store.getSelectedCategories).mockResolvedValue(["nature"]);
   root = createRoot(document.createElement("div"));
@@ -106,6 +107,51 @@ describe("loading a daily lesson", () => {
     vi.mocked(fetch).mockResolvedValue(new Response("Unavailable", { status: 503 }));
     await mount();
     expect(current.errorMessage).toBe("HTTP 503");
+  });
+});
+
+describe("when auto generation is turned off for the user", () => {
+  const pausedRequest = { uid: "reader", email: null, displayName: null, status: "granted", firstSeenAt: "2026-09-01", lastSeenAt: "2026-09-01", autoGeneration: false } as const;
+  const lastLesson: Lesson = { ...lesson, title: "Last generated lesson" };
+
+  beforeEach(() => {
+    vi.mocked(store.getAccessRequest).mockResolvedValue(pausedRequest);
+    vi.mocked(store.getHistory).mockResolvedValue([{ date: "2026-09-20", category: "nature", title: "Last generated lesson" }]);
+    vi.mocked(store.getLesson).mockImplementation(async (_uid, date) => (date === "2026-09-20" ? lastLesson : null));
+  });
+
+  it("shows the last generated lesson as today's instead of generating a new one", async () => {
+    await mount();
+    expect(current.phase).toBe("lesson");
+    expect(current.lesson?.title).toBe("Last generated lesson");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(store.setLesson).not.toHaveBeenCalled();
+    expect(store.appendHistory).not.toHaveBeenCalled();
+  });
+
+  it("still lets them take the quiz and records it against today", async () => {
+    vi.mocked(store.completeDailyLesson).mockResolvedValue({
+      streak: { streak: 3, longest: 4, lastDate: "2026-09-21" }, progress: { done: true, correct: 1, total: 1, answers: [0] },
+    });
+    await mount();
+    await act(async () => current.actions.startQuiz());
+    await act(async () => current.actions.selectOption(0));
+    await act(async () => current.actions.nextQuestion());
+    expect(store.completeDailyLesson).toHaveBeenCalledWith("reader", current.date, expect.objectContaining({ done: true, correct: 1 }));
+    expect(current.phase).toBe("done");
+  });
+
+  it("prefers a lesson already saved for today", async () => {
+    vi.mocked(store.getLesson).mockResolvedValue(lesson);
+    await mount();
+    expect(current.lesson?.title).toBe("Saved lesson");
+  });
+
+  it("still generates a first lesson when they have never had one", async () => {
+    vi.mocked(store.getHistory).mockResolvedValue([]);
+    vi.mocked(store.getLesson).mockResolvedValue(null);
+    await mount();
+    expect(fetch).toHaveBeenCalled();
   });
 });
 

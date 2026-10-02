@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { reportTokensUsed } from "./token-budget";
+import { getTokensUsedToday, reportTokensUsed, TokenTrackerError } from "./token-budget";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -25,4 +25,20 @@ it("throws when the tracker responds with an error status, so callers can treat 
 it("throws when the underlying fetch itself fails", async () => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
   await expect(reportTokensUsed(123)).rejects.toThrow("network down");
+});
+
+it("reads today's usage from the tracker", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ tokens: 42 })));
+  expect(await getTokensUsedToday()).toBe(42);
+});
+
+it.each([
+  ["the request fails", () => vi.fn().mockRejectedValue(new Error("network down"))],
+  ["it responds with an error status", () => vi.fn().mockResolvedValue(new Response("boom", { status: 502 }))],
+  ["it responds with something that isn't JSON", () => vi.fn().mockResolvedValue(new Response("<html>", { status: 200 }))],
+  ["the usage isn't a number", () => vi.fn().mockResolvedValue(Response.json({ tokens: "lots" }))],
+  ["the usage is missing", () => vi.fn().mockResolvedValue(Response.json({}))],
+])("throws a TokenTrackerError when %s, so callers never mistake an outage for zero usage", async (_name, fetchMock) => {
+  vi.stubGlobal("fetch", fetchMock());
+  await expect(getTokensUsedToday()).rejects.toBeInstanceOf(TokenTrackerError);
 });

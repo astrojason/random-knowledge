@@ -5,8 +5,10 @@ import type { User } from "firebase/auth";
 import { syncAppBadge } from "@/lib/app-badge";
 import { CATEGORY_KEYS, defaultWeights, pickCategory, type CategoryKey, type Weights } from "@/lib/categories";
 import { todayStr } from "@/lib/date";
+import { pausedFallbackDate } from "@/lib/paused-generation";
 import {
   appendHistory,
+  getAccessRequest,
   completeDailyLesson,
   getHistory,
   getLesson,
@@ -52,24 +54,28 @@ export function useDailyLesson(user: User | null) {
     setDate(today);
 
     try {
-      const [existingLesson, streakData, weightsData, history, progressData, categoriesData] = await Promise.all([
+      const [existingLesson, streakData, weightsData, history, progressData, categoriesData, accessRequest] = await Promise.all([
         getLesson(user.uid, today),
         getStreak(user.uid),
         getWeights(user.uid),
         getHistory(user.uid),
         getProgress(user.uid, today),
         getSelectedCategories(user.uid),
+        getAccessRequest(user.uid),
       ]);
       setStreakState(streakData);
       setWeightsState(weightsData);
       setSelectedCategoriesState(categoriesData ?? CATEGORY_KEYS);
-      setLessonState(existingLesson);
-      if (!existingLesson && !categoriesData) {
+      // With auto generation off, a day without its own lesson shows the last one generated, with the normal quiz and streak.
+      const fallbackDate = existingLesson ? null : pausedFallbackDate(accessRequest, history);
+      const todaysLesson = existingLesson ?? (fallbackDate ? await getLesson(user.uid, fallbackDate) : null);
+      setLessonState(todaysLesson);
+      if (!todaysLesson && !categoriesData) {
         setPhase("categories");
         return;
       }
 
-      let currentLesson = existingLesson;
+      let currentLesson = todaysLesson;
       if (!currentLesson) {
         setPhase("generating");
         currentLesson = await createDailyLesson(user, today, weightsData, history, categoriesData ?? CATEGORY_KEYS);

@@ -1,6 +1,6 @@
 {
   "name": "@random-knowledge/shared",
-  "version": "1.2.3",
+  "version": "1.2.5",
   "private": true,
   "type": "module",
   "exports": {
@@ -11,6 +11,7 @@
     "./streak": "./src/streak.ts",
     "./date": "./src/date.ts",
     "./auth-guard": "./src/auth-guard.ts",
+    "./paused-generation": "./src/paused-generation.ts",
     "./lesson-storage": "./src/lesson-storage.ts",
     "./share": "./src/share.ts",
     "./firestore": "./src/firestore.ts"

@@ -10,7 +10,7 @@ import { CronRunLog } from "@/components/admin/CronRunLog";
 import { GenerationLog } from "@/components/admin/GenerationLog";
 import { useAuth } from "@/lib/auth-context";
 import { isSuperadmin, requestsForAdmin, type AccessRequest } from "@/lib/auth-guard";
-import { grantAccess, listAccessRequests, listCronRunLog, listGenerationLog, revokeAccess } from "@/lib/firestore";
+import { grantAccess, listAccessRequests, listCronRunLog, listGenerationLog, revokeAccess, setAutoGeneration } from "@/lib/firestore";
 import type { CronRunLogEntry, GenerationLogEntry } from "@/lib/types";
 
 export default function AdminPage() {
@@ -80,6 +80,16 @@ export default function AdminPage() {
     }
   };
 
+  const handleToggleAutoGeneration = async (uid: string, enabled: boolean) => {
+    try {
+      await setAutoGeneration(uid, enabled);
+      setRequests((prev) => prev?.map((r) => (r.uid === uid ? { ...r, autoGeneration: enabled } : r)) ?? null);
+    } catch (err) {
+      console.error("Failed to change auto generation", err);
+      setAccessError(err instanceof Error ? err.message : "Failed to change auto generation");
+    }
+  };
+
   return (
     <div className="mx-auto w-full max-w-[640px] px-4 py-10">
       <Card>
@@ -93,6 +103,7 @@ export default function AdminPage() {
               requests={requestsForAdmin(requests, user.uid)}
               onGrant={handleGrant}
               onRevoke={handleRevoke}
+              onToggleAutoGeneration={handleToggleAutoGeneration}
             />
           </>
         )}
