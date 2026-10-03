@@ -6,6 +6,7 @@ import {
   getPushTokenAdmin,
   listGrantedUserIds,
   listPausedUserIds,
+  listSuperadminUserIds,
   logCronRunAdmin,
   logGenerationAdmin,
   saveDailyLessonAdmin,
@@ -18,6 +19,7 @@ import type { Lesson } from "@/lib/types";
 vi.mock("@/lib/firebase-admin", () => ({
   listGrantedUserIds: vi.fn(),
   listPausedUserIds: vi.fn(),
+  listSuperadminUserIds: vi.fn(),
   getDailyGenerationContextAdmin: vi.fn(),
   getPushTokenAdmin: vi.fn(),
   saveDailyLessonAdmin: vi.fn(),
@@ -42,6 +44,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => Response.json({ tokens: 0 })));
   vi.mocked(listGrantedUserIds).mockResolvedValue(["alice"]);
   vi.mocked(listPausedUserIds).mockResolvedValue([]);
+  vi.mocked(listSuperadminUserIds).mockResolvedValue([]);
   vi.mocked(getDailyGenerationContextAdmin).mockResolvedValue(emptyContext);
   vi.mocked(generateSourcedLesson).mockResolvedValue(lesson);
   vi.mocked(attachLessonAudio).mockImplementation(async (_path, l) => l);
@@ -70,6 +73,19 @@ it("generates and saves a lesson for a granted user without one today", async ()
   const body = await response.json();
   expect(body.results).toEqual([{ uid: "alice", status: "generated" }]);
   expect(saveDailyLessonAdmin).toHaveBeenCalledWith("alice", body.date, { category: "nature", ...lesson }, []);
+});
+
+it("also generates for superadmins, who have access through their claim rather than a granted request", async () => {
+  vi.mocked(listSuperadminUserIds).mockResolvedValue(["admin"]);
+  const body = await (await POST(request())).json();
+  expect(body.results).toEqual([{ uid: "alice", status: "generated" }, { uid: "admin", status: "generated" }]);
+  expect(saveDailyLessonAdmin).toHaveBeenCalledWith("admin", body.date, expect.anything(), []);
+});
+
+it("generates once for a superadmin who also has a granted request", async () => {
+  vi.mocked(listSuperadminUserIds).mockResolvedValue(["alice"]);
+  const body = await (await POST(request())).json();
+  expect(body.results).toEqual([{ uid: "alice", status: "generated" }]);
 });
 
 it("logs the generation for admins after saving it", async () => {

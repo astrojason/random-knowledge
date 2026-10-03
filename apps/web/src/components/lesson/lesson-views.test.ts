@@ -27,8 +27,8 @@ function state(phase: ReturnType<typeof useDailyLesson>["phase"]): ReturnType<ty
     phase, date: "2026-09-10", lesson, streak: { streak: 1, longest: 1, lastDate: null },
     weights: {} as ReturnType<typeof useDailyLesson>["weights"], selectedCategories: ["nature"],
     progress: { done: true, correct: 1, total: 1, answers: [0] },
-    quiz: { qIndex: 0, correct: 0, selected: null, answers: [] }, preReview: { qIndex: 0 }, preReviewEnabled: false, errorMessage: "Test error", categoryKeys: ["nature"],
-    actions: { retry: vi.fn(), startQuiz: noop, answerPreReview: noop, skipPreReview: noop, setPreReview: vi.fn(), selectOption: noop, nextQuestion: vi.fn(), adjustWeight: vi.fn(), resetAll: vi.fn(), saveCategories: vi.fn() },
+    quiz: { qIndex: 0, correct: 0, selected: null, answers: [] }, preReview: { qIndex: 0 }, errorMessage: "Test error", categoryKeys: ["nature"],
+    actions: { retry: vi.fn(), startQuiz: noop, answerPreReview: noop, skipPreReview: noop, selectOption: noop, nextQuestion: vi.fn(), adjustWeight: vi.fn(), resetAll: vi.fn(), saveCategories: vi.fn() },
   };
 }
 

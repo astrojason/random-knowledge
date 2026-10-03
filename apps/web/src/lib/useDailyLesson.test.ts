@@ -11,7 +11,7 @@ import type { Lesson } from "./types";
 
 vi.mock("./firestore", () => ({
   appendHistory: vi.fn(), completeDailyLesson: vi.fn(), getAccessRequest: vi.fn(), getHistory: vi.fn(), getLesson: vi.fn(),
-  getPreReviewEnabled: vi.fn(), setPreReviewEnabled: vi.fn(), getProgress: vi.fn(), getSelectedCategories: vi.fn(), getStreak: vi.fn(), getWeights: vi.fn(),
+  getPreReviewEnabled: vi.fn(), getProgress: vi.fn(), getSelectedCategories: vi.fn(), getStreak: vi.fn(), getWeights: vi.fn(),
   resetAllUserData: vi.fn(), setLesson: vi.fn(), setSelectedCategories: vi.fn(), setWeights: vi.fn(),
 }));
 
@@ -206,7 +206,6 @@ describe("pre-review", () => {
   it("shows the pre-review before the lesson when it is turned on", async () => {
     await mount();
     expect(current.phase).toBe("prereview");
-    expect(current.preReviewEnabled).toBe(true);
     expect(current.preReview.qIndex).toBe(0);
   });
 
@@ -242,22 +241,5 @@ describe("pre-review", () => {
     vi.mocked(store.getProgress).mockResolvedValue({ done: true, correct: 1, total: 1, answers: [0] });
     await mount();
     expect(current.phase).toBe("done");
-  });
-
-  it("saves the setting and applies it to the next lesson", async () => {
-    vi.mocked(store.getPreReviewEnabled).mockResolvedValue(false);
-    await mount();
-    await act(async () => current.actions.setPreReview(true));
-    expect(store.setPreReviewEnabled).toHaveBeenCalledWith(user.uid, true);
-    expect(current.preReviewEnabled).toBe(true);
-    expect(current.phase).toBe("lesson");
-  });
-
-  it("keeps the old setting and reports the error when saving fails", async () => {
-    vi.mocked(store.getPreReviewEnabled).mockResolvedValue(false);
-    vi.mocked(store.setPreReviewEnabled).mockRejectedValue(new Error("offline"));
-    await mount();
-    await expect(act(async () => current.actions.setPreReview(true))).rejects.toThrow("offline");
-    expect(current.preReviewEnabled).toBe(false);
   });
 });

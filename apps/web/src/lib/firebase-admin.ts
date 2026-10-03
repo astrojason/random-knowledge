@@ -47,6 +47,22 @@ export async function listGrantedUserIds(): Promise<string[]> {
   return snap.docs.map((d) => d.id);
 }
 
+/**
+ * Superadmins reach the app through their `superadmin` auth claim, not a granted access request, so
+ * listGrantedUserIds never includes them. Reads every Auth account, which is fine at this app's size.
+ */
+export async function listSuperadminUserIds(): Promise<string[]> {
+  const auth = getAuth(getAdminApp());
+  const uids: string[] = [];
+  let pageToken: string | undefined;
+  do {
+    const page = await auth.listUsers(1000, pageToken);
+    uids.push(...page.users.filter((user) => user.customClaims?.superadmin === true).map((user) => user.uid));
+    pageToken = page.pageToken;
+  } while (pageToken);
+  return uids;
+}
+
 /** Granted accounts a superadmin has paused auto generation for; the cron skips them and they keep seeing their last lesson. */
 export async function listPausedUserIds(): Promise<string[]> {
   const snap = await getFirestore(getAdminApp()).collection("accessRequests")

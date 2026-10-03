@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { pickCategory } from "@/lib/categories";
 import { todayStr } from "@/lib/date";
-import { getDailyGenerationContextAdmin, getPushTokenAdmin, listGrantedUserIds, listPausedUserIds, logCronRunAdmin, logGenerationAdmin, saveDailyLessonAdmin } from "@/lib/firebase-admin";
+import { getDailyGenerationContextAdmin, getPushTokenAdmin, listGrantedUserIds, listPausedUserIds, listSuperadminUserIds, logCronRunAdmin, logGenerationAdmin, saveDailyLessonAdmin } from "@/lib/firebase-admin";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
 import { isOutOfCredits } from "@/lib/openai-errors";
@@ -59,7 +59,7 @@ async function notifyMobileBadge(uid: string): Promise<void> {
 }
 
 /**
- * Pre-generates today's lesson for every user with granted access, so it's
+ * Pre-generates today's lesson for every user with granted access (and every superadmin), so it's
  * ready before they open the app, and badges the mobile app's icon for
  * anyone with a registered device. Retries a user's generation (the research
  * + draft + source-review pipeline can fail transiently, e.g. a rejected
@@ -77,7 +77,12 @@ export async function POST(request: Request) {
   if (denied) return denied;
 
   const date = todayStr("UTC");
-  const [uids, pausedUids] = await Promise.all([listGrantedUserIds(), listPausedUserIds().then((ids) => new Set(ids))]);
+  const [granted, superadmins, pausedUids] = await Promise.all([
+    listGrantedUserIds(),
+    listSuperadminUserIds(),
+    listPausedUserIds().then((ids) => new Set(ids)),
+  ]);
+  const uids = [...new Set([...granted, ...superadmins])];
   const results: CronRunResult[] = [];
   let stoppedForTokenLimit = false;
 

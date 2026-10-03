@@ -12,6 +12,7 @@ export function PageFrame({ children }: { children: ReactNode }) {
         <nav className="mb-5 flex gap-4 border-b border-border pb-3.5">
           <Link href="/" className={linkClass}>Today&apos;s lesson</Link>
           <Link href="/library" className={linkClass}>Library</Link>
+          <Link href="/settings" className={linkClass}>Settings</Link>
         </nav>
         {children}
       </Card>

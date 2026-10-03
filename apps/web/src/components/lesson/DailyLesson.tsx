@@ -34,8 +34,6 @@ export function DailyLesson() {
           showAdminLink={isSuperadmin(claims)}
           showCategoriesSetting={canEditCategories && !editingCategories}
           categoryCount={selectedCategories.length}
-          preReviewEnabled={state.preReviewEnabled}
-          onTogglePreReview={actions.setPreReview}
           onEditCategories={() => {
             setEditingCategories(true);
             setCategoriesSaved(false);

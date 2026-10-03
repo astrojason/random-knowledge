@@ -19,7 +19,6 @@ import {
   getWeights,
   resetAllUserData,
   setLesson,
-  setPreReviewEnabled,
   setSelectedCategories,
   setWeights,
 } from "@/lib/firestore";
@@ -38,7 +37,6 @@ export function useDailyLesson(user: User | null) {
   const [selectedCategories, setSelectedCategoriesState] = useState<CategoryKey[]>(CATEGORY_KEYS);
   const [progress, setProgressState] = useState<DailyProgress | null>(null);
   const [quiz, setQuiz] = useState(initialQuizState);
-  const [preReviewEnabled, setPreReviewEnabledState] = useState(false);
   const [preReview, setPreReview] = useState({ qIndex: 0 });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -71,7 +69,6 @@ export function useDailyLesson(user: User | null) {
         getAccessRequest(user.uid),
         getPreReviewEnabled(user.uid),
       ]);
-      setPreReviewEnabledState(preReviewOn);
       setStreakState(streakData);
       setWeightsState(weightsData);
       setSelectedCategoriesState(categoriesData ?? CATEGORY_KEYS);
@@ -138,13 +135,6 @@ export function useDailyLesson(user: User | null) {
 
   function skipPreReview() {
     setPhase("lesson");
-  }
-
-  /** Throws when saving fails (and keeps the old setting) so the menu can show the error. */
-  async function setPreReviewSetting(enabled: boolean) {
-    if (!user) throw new Error("Sign in to change this setting.");
-    await setPreReviewEnabled(user.uid, enabled);
-    setPreReviewEnabledState(enabled);
   }
 
   function startQuiz() {
@@ -232,10 +222,9 @@ export function useDailyLesson(user: User | null) {
     progress,
     quiz,
     preReview,
-    preReviewEnabled,
     errorMessage,
     categoryKeys: CATEGORY_KEYS,
-    actions: { retry: load, answerPreReview, skipPreReview, setPreReview: setPreReviewSetting, startQuiz, selectOption, nextQuestion, adjustWeight, resetAll, saveCategories },
+    actions: { retry: load, answerPreReview, skipPreReview, startQuiz, selectOption, nextQuestion, adjustWeight, resetAll, saveCategories },
   };
 }
 
