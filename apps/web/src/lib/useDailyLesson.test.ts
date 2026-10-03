@@ -243,3 +243,19 @@ describe("pre-review", () => {
     expect(current.phase).toBe("done");
   });
 });
+
+describe("category preference weights", () => {
+  it("saves the adjusted weight and uses it", async () => {
+    await mount();
+    await act(async () => current.actions.adjustWeight("nature", 4));
+    expect(store.setWeights).toHaveBeenCalledWith(user.uid, expect.objectContaining({ nature: 14 }));
+    expect(current.weights.nature).toBe(14);
+  });
+
+  it("keeps the old weight and reports the error when saving fails", async () => {
+    vi.mocked(store.setWeights).mockRejectedValue(new Error("offline"));
+    await mount();
+    await expect(act(async () => current.actions.adjustWeight("nature", 4))).rejects.toThrow("offline");
+    expect(current.weights.nature).toBe(10);
+  });
+});

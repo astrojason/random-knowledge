@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Lora } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import { Footer } from "@/components/Footer";
+import { ToastProvider } from "@/components/Toast";
 import "./globals.css";
 
 const inter = Inter({
@@ -48,7 +49,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${inter.variable} ${lora.variable} h-full`}>
       <body className="flex min-h-screen flex-col bg-bg font-sans text-fg antialiased">
         <div className="flex-1">
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </AuthProvider>
         </div>
         <Footer />
       </body>

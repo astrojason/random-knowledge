@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/components/Toast";
 import { AdminAccessList } from "@/components/admin/AdminAccessList";
 import { LoadingView } from "@/components/lesson/LoadingView";
 import { useAuth } from "@/lib/auth-context";
@@ -9,6 +10,7 @@ import { grantAccess, listAccessRequests, revokeAccess, setAutoGeneration } from
 
 export default function AdminAccessPage() {
   const { user } = useAuth();
+  const toast = useToast();
   const [requests, setRequests] = useState<AccessRequest[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,9 +26,10 @@ export default function AdminAccessPage() {
   if (!user) return null;
 
   /** Saves a change to one request, then mirrors it locally; failures are logged and shown. */
-  async function change(uid: string, save: () => Promise<void>, patch: Partial<AccessRequest>, failure: string) {
+  async function change(uid: string, save: () => Promise<void>, patch: Partial<AccessRequest>, failure: string, confirmation: string) {
     try {
       await save();
+      toast(confirmation);
       setRequests((prev) => prev?.map((r) => (r.uid === uid ? { ...r, ...patch } : r)) ?? null);
     } catch (err) {
       console.error(failure, err);
@@ -43,10 +46,11 @@ export default function AdminAccessPage() {
       ) : (
         <AdminAccessList
           requests={requestsForAdmin(requests, user.uid)}
-          onGrant={(uid) => change(uid, () => grantAccess(uid, user.uid), { status: "granted" }, "Failed to grant access")}
-          onRevoke={(uid) => change(uid, () => revokeAccess(uid), { status: "revoked" }, "Failed to revoke access")}
+          onGrant={(uid) => change(uid, () => grantAccess(uid, user.uid), { status: "granted" }, "Failed to grant access", "Access granted.")}
+          onRevoke={(uid) => change(uid, () => revokeAccess(uid), { status: "revoked" }, "Failed to revoke access", "Access revoked.")}
           onToggleAutoGeneration={(uid, enabled) =>
-            change(uid, () => setAutoGeneration(uid, enabled), { autoGeneration: enabled }, "Failed to change auto generation")}
+            change(uid, () => setAutoGeneration(uid, enabled), { autoGeneration: enabled }, "Failed to change auto generation",
+              enabled ? "Auto lessons turned on." : "Auto lessons turned off.")}
         />
       )}
     </div>

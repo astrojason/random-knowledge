@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/Toast";
 import { LoadState } from "@/components/share/PageFrame";
 import { getPreReviewEnabled, setPreReviewEnabled } from "@/lib/firestore";
 import { useLoad } from "@/lib/useLoad";
@@ -17,12 +18,14 @@ export function PreReviewSetting({ uid }: { uid: string }) {
 function PreReviewSwitch({ uid, initial }: { uid: string; initial: boolean }) {
   const [enabled, setEnabled] = useState(initial);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function toggle(next: boolean) {
     setError(null);
     try {
       await setPreReviewEnabled(uid, next);
       setEnabled(next);
+      toast(next ? "Pre-review turned on." : "Pre-review turned off.");
     } catch (err) {
       console.error("Failed to save the pre-review setting:", err);
       setError(err instanceof Error ? err.message : "Could not save this setting.");

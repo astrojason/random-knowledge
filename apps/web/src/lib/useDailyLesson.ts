@@ -179,16 +179,17 @@ export function useDailyLesson(user: User | null) {
     }
   }
 
+  /** Throws when saving fails (and keeps the old weight) so the results screen can show the error. */
   async function adjustWeight(category: CategoryKey, delta: number) {
-    if (!user) return;
+    if (!user) throw new Error("Sign in to save your preference.");
     const next = { ...weights, [category]: Math.min(Math.max((weights[category] || 10) + delta, 2), 40) };
-    setWeightsState(next);
     try {
       await setWeights(user.uid, next);
     } catch (err) {
       console.error("Failed to save weight adjustment:", err);
-      setErrorMessage(errorMessageFor(err, "Failed to save your preference."));
+      throw err;
     }
+    setWeightsState(next);
   }
 
   async function resetAll() {

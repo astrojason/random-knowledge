@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/Toast";
 import { Card } from "@/components/lesson/Card";
 import { CategoryPicker } from "@/components/lesson/CategoryPicker";
 import { DoneView } from "@/components/lesson/DoneView";
@@ -21,7 +22,7 @@ export function DailyLesson() {
   const state = useDailyLesson(user);
   const { phase, date, lesson, streak, selectedCategories, actions } = state;
   const [editingCategories, setEditingCategories] = useState(false);
-  const [categoriesSaved, setCategoriesSaved] = useState(false);
+  const toast = useToast();
   const canEditCategories = SETTINGS_PHASES.includes(phase);
 
   return (
@@ -36,16 +37,10 @@ export function DailyLesson() {
           categoryCount={selectedCategories.length}
           onEditCategories={() => {
             setEditingCategories(true);
-            setCategoriesSaved(false);
           }}
           onSignOut={signOut}
         />
 
-        {canEditCategories && !editingCategories && categoriesSaved && (
-          <div className="mb-5">
-            <span role="status" className="text-xs text-fg-muted">Categories saved for future lessons.</span>
-          </div>
-        )}
         {showCategoryPicker(phase, editingCategories) && (
           <CategoryPicker
             key={phase === "categories" ? "initial" : "edit"}
@@ -53,7 +48,7 @@ export function DailyLesson() {
             onSave={async (categories) => {
               await actions.saveCategories(categories);
               setEditingCategories(false);
-              setCategoriesSaved(true);
+              toast("Categories saved for future lessons.");
             }}
             onCancel={phase === "categories" ? undefined : () => setEditingCategories(false)}
           />
@@ -73,7 +68,6 @@ export function DailyLesson() {
             onClick={() => {
               if (window.confirm("Reset your streak, history, and topic preferences? This cannot be undone.")) {
                 setEditingCategories(false);
-                setCategoriesSaved(false);
                 actions.resetAll();
               }
             }}

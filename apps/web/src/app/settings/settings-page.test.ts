@@ -4,6 +4,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { getPreReviewEnabled, setPreReviewEnabled } from "@/lib/firestore";
+import { ToastProvider } from "@/components/Toast";
 import SettingsPage from "./page";
 
 vi.mock("@/lib/firestore", () => ({ getPreReviewEnabled: vi.fn(), setPreReviewEnabled: vi.fn() }));
@@ -30,7 +31,7 @@ afterEach(async () => {
 });
 
 const checkbox = () => container.querySelector('input[type="checkbox"]') as HTMLInputElement;
-const render = () => act(async () => root.render(createElement(SettingsPage)));
+const render = () => act(async () => root.render(createElement(ToastProvider, null, createElement(SettingsPage))));
 
 it("shows the saved pre-review choice and explains it", async () => {
   vi.mocked(getPreReviewEnabled).mockResolvedValue(true);
@@ -45,6 +46,7 @@ it("saves the choice when toggled", async () => {
   await act(async () => checkbox().click());
   expect(setPreReviewEnabled).toHaveBeenCalledWith("reader", true);
   expect(checkbox().checked).toBe(true);
+  expect(container.querySelector('[role="status"]')?.textContent).toContain("Pre-review turned on");
 });
 
 it("keeps the old choice and shows the error when saving fails", async () => {
@@ -53,6 +55,7 @@ it("keeps the old choice and shows the error when saving fails", async () => {
   await act(async () => checkbox().click());
   expect(checkbox().checked).toBe(false);
   expect(container.querySelector('[role="alert"]')?.textContent).toContain("offline");
+  expect(container.querySelector('[role="status"]')?.textContent).toBe("");
 });
 
 it("shows a load failure instead of a switch", async () => {

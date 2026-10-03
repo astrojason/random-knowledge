@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { getAccessRequestAdmin, hasLessonHistoryAdmin, logGenerationAdmin, verifyIdToken } from "@/lib/firebase-admin";
-import { hasAppAccess, isSuperadmin, resolveAccess } from "@/lib/auth-guard";
+import { authorizeAppUser } from "@/lib/api-auth";
+import { hasLessonHistoryAdmin, logGenerationAdmin } from "@/lib/firebase-admin";
 import { CATEGORIES, type CategoryKey } from "@/lib/categories";
 import { attachLessonAudio } from "@/lib/lesson-audio";
 import { generateSourcedLesson } from "@/lib/lesson-generation";
@@ -22,32 +22,14 @@ function getOpenAI(): OpenAI {
 }
 
 async function authorizeRequest(request: Request): Promise<NextResponse | { uid: string }> {
-  const authHeader = request.headers.get("authorization") || "";
-  const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!idToken) {
-    return NextResponse.json({ error: "Missing Authorization header" }, { status: 401 });
-  }
-  let decoded;
-  try {
-    decoded = await verifyIdToken(idToken);
-  } catch (err) {
-    return NextResponse.json(
-      { error: `Invalid auth token: ${err instanceof Error ? err.message : "unknown error"}` },
-      { status: 401 }
-    );
-  }
-
-  const claims = { superadmin: decoded.superadmin === true };
-  const accessRequest = isSuperadmin(claims) ? null : await getAccessRequestAdmin(decoded.uid);
-  if (!hasAppAccess(resolveAccess(decoded.uid, claims, accessRequest))) {
-    return NextResponse.json({ error: "Access not granted for this account" }, { status: 403 });
-  }
+  const authorized = await authorizeAppUser(request);
+  if (authorized instanceof NextResponse) return authorized;
+  const { uid, accessRequest } = authorized;
   // A superadmin turned auto generation off: they keep their last lesson. Someone with no lesson yet still gets a first one.
-  if (!autoGenerationEnabled(accessRequest) && (await hasLessonHistoryAdmin(decoded.uid))) {
+  if (!autoGenerationEnabled(accessRequest) && (await hasLessonHistoryAdmin(uid))) {
     return NextResponse.json({ error: "Auto generation is turned off for this account" }, { status: 403 });
   }
-
-  return { uid: decoded.uid };
+  return { uid };
 }
 
 export async function POST(request: Request) {

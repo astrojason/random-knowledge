@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { getTokensUsedToday, reportTokensUsed, TokenTrackerError } from "./token-budget";
+import { DAILY_TOKEN_LIMIT, getTokensUsedToday, hasTokensRemaining, reportTokensUsed, TokenTrackerError } from "./token-budget";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -41,4 +41,19 @@ it.each([
 ])("throws a TokenTrackerError when %s, so callers never mistake an outage for zero usage", async (_name, fetchMock) => {
   vi.stubGlobal("fetch", fetchMock());
   await expect(getTokensUsedToday()).rejects.toBeInstanceOf(TokenTrackerError);
+});
+
+it.each([
+  [0, 1_000, true],
+  [DAILY_TOKEN_LIMIT - 1_000, 1_000, true],
+  [DAILY_TOKEN_LIMIT - 999, 1_000, false],
+  [DAILY_TOKEN_LIMIT, 1, false],
+])("with %i tokens used, asking for %i to remain is %s", async (used, minimum, expected) => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ tokens: used })));
+  expect(await hasTokensRemaining(minimum)).toBe(expected);
+});
+
+it("does not assume the budget is unspent when the tracker is unreachable", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+  await expect(hasTokensRemaining(1)).rejects.toBeInstanceOf(TokenTrackerError);
 });
