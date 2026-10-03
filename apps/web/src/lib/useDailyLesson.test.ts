@@ -11,7 +11,7 @@ import type { Lesson } from "./types";
 
 vi.mock("./firestore", () => ({
   appendHistory: vi.fn(), completeDailyLesson: vi.fn(), getAccessRequest: vi.fn(), getHistory: vi.fn(), getLesson: vi.fn(),
-  getProgress: vi.fn(), getSelectedCategories: vi.fn(), getStreak: vi.fn(), getWeights: vi.fn(),
+  getPreReviewEnabled: vi.fn(), setPreReviewEnabled: vi.fn(), getProgress: vi.fn(), getSelectedCategories: vi.fn(), getStreak: vi.fn(), getWeights: vi.fn(),
   resetAllUserData: vi.fn(), setLesson: vi.fn(), setSelectedCategories: vi.fn(), setWeights: vi.fn(),
 }));
 
@@ -45,6 +45,7 @@ beforeEach(() => {
   vi.mocked(store.getHistory).mockResolvedValue([]);
   vi.mocked(store.getAccessRequest).mockResolvedValue(null);
   vi.mocked(store.getProgress).mockResolvedValue(null);
+  vi.mocked(store.getPreReviewEnabled).mockResolvedValue(false);
   vi.mocked(store.getSelectedCategories).mockResolvedValue(["nature"]);
   root = createRoot(document.createElement("div"));
 });
@@ -190,5 +191,73 @@ describe("saving quiz results", () => {
     expect(current.phase).toBe("error");
     expect(current.errorMessage).toBe("Offline");
     expect(current.progress).toBeNull();
+  });
+});
+
+describe("pre-review", () => {
+  const preQuestion = { question: "Which do you expect?", options: ["A", "B", "C"], correctIndex: 0, explanation: "A." };
+  const withPreQuiz: Lesson = { ...lesson, preQuiz: [preQuestion, preQuestion] };
+
+  beforeEach(() => {
+    vi.mocked(store.getLesson).mockResolvedValue(withPreQuiz);
+    vi.mocked(store.getPreReviewEnabled).mockResolvedValue(true);
+  });
+
+  it("shows the pre-review before the lesson when it is turned on", async () => {
+    await mount();
+    expect(current.phase).toBe("prereview");
+    expect(current.preReviewEnabled).toBe(true);
+    expect(current.preReview.qIndex).toBe(0);
+  });
+
+  it("goes to the lesson after the last pre-review question, saving nothing", async () => {
+    await mount();
+    await act(async () => current.actions.answerPreReview());
+    expect(current.phase).toBe("prereview");
+    expect(current.preReview.qIndex).toBe(1);
+    await act(async () => current.actions.answerPreReview());
+    expect(current.phase).toBe("lesson");
+    expect(store.completeDailyLesson).not.toHaveBeenCalled();
+  });
+
+  it("lets the reader skip straight to the lesson", async () => {
+    await mount();
+    await act(async () => current.actions.skipPreReview());
+    expect(current.phase).toBe("lesson");
+  });
+
+  it("goes straight to the lesson when the setting is off", async () => {
+    vi.mocked(store.getPreReviewEnabled).mockResolvedValue(false);
+    await mount();
+    expect(current.phase).toBe("lesson");
+  });
+
+  it("goes straight to the lesson when it has no pre-review questions", async () => {
+    vi.mocked(store.getLesson).mockResolvedValue(lesson);
+    await mount();
+    expect(current.phase).toBe("lesson");
+  });
+
+  it("does not interrupt a lesson that was already completed", async () => {
+    vi.mocked(store.getProgress).mockResolvedValue({ done: true, correct: 1, total: 1, answers: [0] });
+    await mount();
+    expect(current.phase).toBe("done");
+  });
+
+  it("saves the setting and applies it to the next lesson", async () => {
+    vi.mocked(store.getPreReviewEnabled).mockResolvedValue(false);
+    await mount();
+    await act(async () => current.actions.setPreReview(true));
+    expect(store.setPreReviewEnabled).toHaveBeenCalledWith(user.uid, true);
+    expect(current.preReviewEnabled).toBe(true);
+    expect(current.phase).toBe("lesson");
+  });
+
+  it("keeps the old setting and reports the error when saving fails", async () => {
+    vi.mocked(store.getPreReviewEnabled).mockResolvedValue(false);
+    vi.mocked(store.setPreReviewEnabled).mockRejectedValue(new Error("offline"));
+    await mount();
+    await expect(act(async () => current.actions.setPreReview(true))).rejects.toThrow("offline");
+    expect(current.preReviewEnabled).toBe(false);
   });
 });

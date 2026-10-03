@@ -15,6 +15,8 @@
 - [ ] Add Android support to apps/mobile if desired (app.json already has a package id and adaptive icon placeholders, but Android sign-in/build hasn't been set up or tested)
 - [ ] Verify the app-icon badge push (`registerPushToken`, the cron's `notifyMobileBadge`) end-to-end on a real device: needs a fresh `eas build` so the new `expo-notifications` plugin/entitlements are included, EAS to provision the APNs push key on that build (it should prompt for this), notification permission actually granted on the device, and confirming the badge appears after the daily cron runs without opening the app
 
+- [ ] Pre-review on apps/mobile: add the Settings toggle and the pre-review screen (types, `getPreReviewEnabled`/`setPreReviewEnabled` and `preQuiz` already live in `packages/shared`); needs a new `eas build`
+
 ## Ship apps/mobile as an Unlisted App Store app
 
 Distribution plan: **Unlisted App Distribution** — a normal App Store app (full App Review) that isn't searchable or listed; only people with the direct link can install it, with no device registration or yearly expiry. Not ad hoc, and not TestFlight for other people (builds expire after 90 days). EAS is already linked (`eas.json`, `extra.eas.projectId`), the App ID `com.astrojason.random-knowledge` is registered, and Jason is already enrolled in the Apple Developer Program.

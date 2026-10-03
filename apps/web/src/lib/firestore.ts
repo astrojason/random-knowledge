@@ -6,6 +6,8 @@ export const {
   getWeights,
   setWeights,
   setPushToken,
+  getPreReviewEnabled,
+  setPreReviewEnabled,
   getSelectedCategories,
   setSelectedCategories,
   getHistory,

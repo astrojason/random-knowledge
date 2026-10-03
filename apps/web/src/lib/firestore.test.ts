@@ -10,10 +10,14 @@ vi.mock("firebase/firestore", () => ({
   getDocs: vi.fn(),
   updateDoc: vi.fn(),
   runTransaction: vi.fn(),
+  query: vi.fn(),
+  orderBy: vi.fn(),
+  limit: vi.fn(),
+  startAfter: vi.fn(),
 }));
 
-import { deleteDoc, doc, getDoc, getDocs, runTransaction, setDoc } from "firebase/firestore";
-import { addToStash, completeDailyLesson, createShare, getLesson, getShare, getStash, removeFromStash, getSelectedCategories, setLesson, setPushToken, setSelectedCategories } from "./firestore";
+import { deleteDoc, doc, getDoc, getDocs, limit, orderBy, runTransaction, setDoc, startAfter } from "firebase/firestore";
+import { listCronRunLog, listGenerationLog, addToStash, completeDailyLesson, createShare, getLesson, getPreReviewEnabled, setPreReviewEnabled, getShare, getStash, removeFromStash, getSelectedCategories, setLesson, setPushToken, setSelectedCategories } from "./firestore";
 import type { Lesson } from "./types";
 
 /** Firestore's setDoc() rejects any value where an array directly contains another array. */
@@ -57,6 +61,49 @@ describe("category preferences", () => {
   it("does not overwrite preferences with an empty selection", async () => {
     await expect(setSelectedCategories("user-a", [])).rejects.toThrow("Choose at least one category.");
     expect(setDoc).not.toHaveBeenCalled();
+  });
+});
+
+describe.each([
+  ["generation log", listGenerationLog],
+  ["cron run log", listCronRunLog],
+] as const)("%s paging", (_name, list) => {
+  beforeEach(() => {
+    vi.mocked(getDocs).mockResolvedValue({ docs: [{ data: () => ({ uid: "a" }) }] } as unknown as Awaited<ReturnType<typeof getDocs>>);
+  });
+
+  it("starts at the newest entries when there is no cursor", async () => {
+    expect(await list(11)).toEqual([{ uid: "a" }]);
+    expect(orderBy).toHaveBeenCalledWith("createdAt", "desc");
+    expect(limit).toHaveBeenCalledWith(11);
+    expect(startAfter).not.toHaveBeenCalled();
+  });
+
+  it("continues after the last entry of the previous page", async () => {
+    await list(11, "2026-10-01T00:00:00.000Z");
+    expect(startAfter).toHaveBeenCalledWith("2026-10-01T00:00:00.000Z");
+    expect(limit).toHaveBeenCalledWith(11);
+  });
+});
+
+describe("pre-review setting", () => {
+  const settingsDoc = (data: Record<string, unknown> | null) =>
+    vi.mocked(getDoc).mockResolvedValue({ exists: () => data !== null, data: () => data } as unknown as Awaited<ReturnType<typeof getDoc>>);
+
+  it("is off for someone who never turned it on", async () => {
+    settingsDoc(null);
+    expect(await getPreReviewEnabled("user-a")).toBe(false);
+    expect(getDoc).toHaveBeenCalledWith("users/user-a/meta/settings");
+  });
+
+  it("reads the saved choice", async () => {
+    settingsDoc({ preReview: true });
+    expect(await getPreReviewEnabled("user-a")).toBe(true);
+  });
+
+  it("saves the choice without touching other settings", async () => {
+    await setPreReviewEnabled("user-a", true);
+    expect(setDoc).toHaveBeenCalledWith("users/user-a/meta/settings", { preReview: true }, { merge: true });
   });
 });
 

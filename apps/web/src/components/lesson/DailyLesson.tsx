@@ -8,6 +8,7 @@ import { ErrorView } from "@/components/lesson/ErrorView";
 import { Header } from "@/components/lesson/Header";
 import { LessonView } from "@/components/lesson/LessonView";
 import { LoadingView } from "@/components/lesson/LoadingView";
+import { PreReviewView } from "@/components/lesson/PreReviewView";
 import { QuizView } from "@/components/lesson/QuizView";
 import { StreakStatus } from "@/components/lesson/StreakStatus";
 import { useAuth } from "@/lib/auth-context";
@@ -21,7 +22,7 @@ export function DailyLesson() {
   const { phase, date, lesson, streak, selectedCategories, actions } = state;
   const [editingCategories, setEditingCategories] = useState(false);
   const [categoriesSaved, setCategoriesSaved] = useState(false);
-  const canEditCategories = ["lesson", "quiz", "done"].includes(phase);
+  const canEditCategories = SETTINGS_PHASES.includes(phase);
 
   return (
     <div className="mx-auto w-full max-w-[640px] px-4 py-10">
@@ -33,6 +34,8 @@ export function DailyLesson() {
           showAdminLink={isSuperadmin(claims)}
           showCategoriesSetting={canEditCategories && !editingCategories}
           categoryCount={selectedCategories.length}
+          preReviewEnabled={state.preReviewEnabled}
+          onTogglePreReview={actions.setPreReview}
           onEditCategories={() => {
             setEditingCategories(true);
             setCategoriesSaved(false);
@@ -96,8 +99,9 @@ function LessonPhase({ state }: { state: ReturnType<typeof useDailyLesson> }) {
 }
 
 function LoadedLesson({ state }: { state: ReturnType<typeof useDailyLesson> }) {
-  const { phase, date, lesson, progress, quiz, actions } = state;
+  const { phase, date, lesson, progress, quiz, preReview, actions } = state;
   if (!lesson) return null;
+  if (phase === "prereview") return <PreReviewView lesson={lesson} preReview={preReview} onAnswer={actions.answerPreReview} onSkip={actions.skipPreReview} />;
   if (phase === "lesson") return <LessonView lesson={lesson} date={date} onStartQuiz={actions.startQuiz} />;
   if (phase === "quiz") return <QuizView lesson={lesson} quiz={quiz} onSelect={actions.selectOption} onNext={actions.nextQuestion} />;
   if (phase !== "done" || !progress) return null;
@@ -106,6 +110,8 @@ function LoadedLesson({ state }: { state: ReturnType<typeof useDailyLesson> }) {
     onLess={() => actions.adjustWeight(lesson.category, -4)} />;
 }
 
+const SETTINGS_PHASES: string[] = ["prereview", "lesson", "quiz", "done"];
+
 function showCategoryPicker(phase: string, editing: boolean): boolean {
-  return phase === "categories" || (["lesson", "quiz", "done"].includes(phase) && editing);
+  return phase === "categories" || (SETTINGS_PHASES.includes(phase) && editing);
 }

@@ -55,15 +55,22 @@ function isTextArray(value: unknown, length: number): value is string[] {
   return Array.isArray(value) && value.length === length && value.every(isText);
 }
 
-function isAnswerIndex(value: unknown): boolean {
-  return Number.isInteger(value) && Number(value) >= 0 && Number(value) < 4;
+function isQuestion(value: unknown, optionCount: number): value is QuizQuestion {
+  if (!isObject(value)) return false;
+  const validOptions = isTextArray(value.options, optionCount) && new Set(value.options).size === optionCount;
+  const validIndex = Number.isInteger(value.correctIndex) && Number(value.correctIndex) >= 0 && Number(value.correctIndex) < optionCount;
+  return isText(value.question) && isText(value.explanation) && validOptions && validIndex;
 }
 
 function isQuizQuestion(value: unknown): value is QuizQuestion {
-  if (!isObject(value)) return false;
-  const validOptions = isTextArray(value.options, 4) && new Set(value.options).size === 4;
-  const validIndex = isAnswerIndex(value.correctIndex);
-  return isText(value.question) && isText(value.explanation) && validOptions && validIndex;
+  return isQuestion(value, 4);
+}
+
+/** The guess-first questions are a nicety, so a bad batch is dropped (loudly) instead of throwing away a sourced lesson. */
+function parsePreQuiz(value: unknown): QuizQuestion[] | undefined {
+  if (Array.isArray(value) && value.length === 2 && value.every((question) => isQuestion(question, 3))) return value;
+  console.warn("Dropping invalid pre-review questions from the generated lesson", value);
+  return undefined;
 }
 
 function parseLessonContent(value: unknown) {
@@ -89,9 +96,10 @@ function parseLesson(input: unknown, sources: LessonSource[]): GeneratedLesson {
   if (distinctPublishers([...used].map((id) => sources[id - 1].url)).size < 2) throw new Error("The lesson needs corroborating source references. Please try again.");
 
   // Construct the response explicitly: generated URLs and extra model fields are never trusted.
+  const preQuiz = parsePreQuiz(value.preQuiz);
   return {
     title: value.title, body: value.body, wikiQuery: value.wikiQuery, youtubeQuery: value.youtubeQuery,
-    quiz: value.quiz, sources,
+    quiz: value.quiz, ...(preQuiz && { preQuiz }), sources,
     paragraphSources: value.paragraphSources as number[][],
   };
 }
@@ -153,7 +161,7 @@ The supplied evidence notes rest on a single publisher. Search for an independen
   async function jsonCompletion(instructions: string, input: string): Promise<unknown> {
     const completion = await client.chat.completions.create({
       model,
-      max_tokens: 2400,
+      max_tokens: 3000,
       response_format: { type: "json_object" },
       messages: [{ role: "system", content: instructions }, { role: "user", content: input }],
     });
@@ -171,15 +179,16 @@ The supplied evidence notes rest on a single publisher. Search for an independen
 Write one short curiosity lesson using ONLY the supplied research evidence. Stay within the selected category. Explain one specific thing the learner can understand or do after reading. Do not add details from memory. Keep the title accurate and free of clickbait exaggeration.
 Write exactly 3 short paragraphs, roughly 220-320 words total, with no headers. Explain how or why, give a concrete example, and include a meaningful limitation or misconception. Define unfamiliar terms. For practical skills include setup, ordered actions, and an observable success check.
 Provide exactly 3 comprehension questions about this lesson, each with 4 distinct options, one correct answer, and a one-sentence explanation. Distractors are incorrect answer choices, not claims to endorse. The correct answers and explanations must be supported by the lesson and evidence.
+Also provide exactly 2 simpler "preQuiz" questions that a reader can sensibly guess BEFORE reading: about the topic's central idea or a common intuition about it, each with exactly 3 distinct options, one correct answer, and a one-sentence explanation. They must not require knowing the lesson text, and their answers must also be supported by the lesson and evidence.
 For each paragraph provide a nonempty list of the one-based source IDs supporting its claims. Use only IDs in the supplied evidence and use at least two sources from different publishers across the lesson. Do not insert URLs, Markdown, or citation markers into the body; the app displays the references separately.
 Also provide two plain search phrases of 3-6 words, one for Wikipedia and one for YouTube, not invented links or article titles.
 Return ONLY JSON with this shape:
-{"title":"under 60 characters","body":["paragraph1","paragraph2","paragraph3"],"paragraphSources":[[1],[2],[1,2]],"wikiQuery":"short search phrase","youtubeQuery":"short search phrase","quiz":[{"question":"...","options":["a","b","c","d"],"correctIndex":0,"explanation":"..."},{"question":"...","options":["a","b","c","d"],"correctIndex":0,"explanation":"..."},{"question":"...","options":["a","b","c","d"],"correctIndex":0,"explanation":"..."}]}`,
+{"title":"under 60 characters","body":["paragraph1","paragraph2","paragraph3"],"paragraphSources":[[1],[2],[1,2]],"wikiQuery":"short search phrase","youtubeQuery":"short search phrase","quiz":[{"question":"...","options":["a","b","c","d"],"correctIndex":0,"explanation":"..."},{"question":"...","options":["a","b","c","d"],"correctIndex":0,"explanation":"..."},{"question":"...","options":["a","b","c","d"],"correctIndex":0,"explanation":"..."}],"preQuiz":[{"question":"...","options":["a","b","c"],"correctIndex":0,"explanation":"..."},{"question":"...","options":["a","b","c"],"correctIndex":0,"explanation":"..."}]}`,
   JSON.stringify({ category: CATEGORIES[category], guidance: CATEGORY_GUIDANCE[category], evidence }));
   const lesson = parseLesson(draft, sources);
 
   const review = await jsonCompletion(`${EVIDENCE_RULES}
-Act as a skeptical factual editor, separate from the writer. Audit the supplied draft against the cited research notes. Do not use your memory to rescue an unsupported claim. Check EVERY factual assertion in the title and body, the quiz's correct answers and explanations, and each paragraph's source mapping. Check that each quiz has exactly one defensible correct answer and can be answered from the lesson. Check calculations, named entities, dates, cultural attribution, qualifiers, and practical instructions. Reject sensational overstatement, invented connective details, weak sources, or circular corroboration. Incorrect quiz distractors are allowed if clearly incorrect. Clearly labeled analogies and hypotheticals are allowed if their reasoning is valid. If the research notes do not provide enough evidence to establish a claim, reject the draft. Return ONLY JSON: {"supported":true,"issues":[]} on a fully supported draft, otherwise {"supported":false,"issues":["specific unsupported or misleading claims"]}.`,
+Act as a skeptical factual editor, separate from the writer. Audit the supplied draft against the cited research notes. Do not use your memory to rescue an unsupported claim. Check EVERY factual assertion in the title and body, the quiz's correct answers and explanations, and each paragraph's source mapping. Check that each quiz and preQuiz question has exactly one defensible correct answer and can be answered from the lesson. Check calculations, named entities, dates, cultural attribution, qualifiers, and practical instructions. Reject sensational overstatement, invented connective details, weak sources, or circular corroboration. Incorrect quiz distractors are allowed if clearly incorrect. Clearly labeled analogies and hypotheticals are allowed if their reasoning is valid. If the research notes do not provide enough evidence to establish a claim, reject the draft. Return ONLY JSON: {"supported":true,"issues":[]} on a fully supported draft, otherwise {"supported":false,"issues":["specific unsupported or misleading claims"]}.`,
   JSON.stringify({ evidence, draft: lesson }));
   if (!isObject(review) || review.supported !== true || !Array.isArray(review.issues) || review.issues.length !== 0) {
     console.warn("Lesson failed source review", review);

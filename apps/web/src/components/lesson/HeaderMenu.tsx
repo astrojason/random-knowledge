@@ -9,13 +9,28 @@ export function HeaderMenu({
   showCategoriesSetting,
   categoryCount,
   onEditCategories,
+  preReviewEnabled = false,
+  onTogglePreReview,
 }: {
   showAdminLink?: boolean;
   showCategoriesSetting: boolean;
   categoryCount: number;
   onEditCategories: () => void;
+  preReviewEnabled?: boolean;
+  onTogglePreReview?: (enabled: boolean) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const [preReviewError, setPreReviewError] = useState<string | null>(null);
+
+  async function togglePreReview(enabled: boolean) {
+    setPreReviewError(null);
+    try {
+      await onTogglePreReview?.(enabled);
+    } catch (err) {
+      console.error("Failed to save the pre-review setting:", err);
+      setPreReviewError(err instanceof Error ? err.message : "Could not save this setting.");
+    }
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -82,6 +97,27 @@ export function HeaderMenu({
             >
               My categories ({categoryCount})
             </button>
+            {onTogglePreReview && (
+              <div className="mt-4">
+                <label className="flex cursor-pointer items-start gap-2.5 text-sm text-fg">
+                  <input
+                    type="checkbox"
+                    checked={preReviewEnabled}
+                    onChange={(e) => void togglePreReview(e.target.checked)}
+                    className="mt-0.5 size-4 accent-accent"
+                  />
+                  <span>
+                    <span className="font-semibold">Pre-review</span>
+                    <span className="block text-xs text-fg-muted">
+                      Answer a couple of quick questions before reading. Even a wrong guess gets you thinking before you find the answer.
+                    </span>
+                  </span>
+                </label>
+                {preReviewError && (
+                  <p role="alert" className="mt-1.5 text-xs text-rust">{preReviewError}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

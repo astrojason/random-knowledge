@@ -12,19 +12,21 @@ import {
   completeDailyLesson,
   getHistory,
   getLesson,
+  getPreReviewEnabled,
   getProgress,
   getSelectedCategories,
   getStreak,
   getWeights,
   resetAllUserData,
   setLesson,
+  setPreReviewEnabled,
   setSelectedCategories,
   setWeights,
 } from "@/lib/firestore";
 import { advanceQuiz, initialQuizState, selectAnswer } from "@/lib/quiz";
 import type { DailyProgress, GeneratedLesson, HistoryEntry, Lesson, StreakData } from "@/lib/types";
 
-type Phase = "loading" | "categories" | "generating" | "error" | "lesson" | "quiz" | "done";
+type Phase = "loading" | "categories" | "generating" | "error" | "prereview" | "lesson" | "quiz" | "done";
 
 export function useDailyLesson(user: User | null) {
   const busy = useRef(false);
@@ -36,13 +38,18 @@ export function useDailyLesson(user: User | null) {
   const [selectedCategories, setSelectedCategoriesState] = useState<CategoryKey[]>(CATEGORY_KEYS);
   const [progress, setProgressState] = useState<DailyProgress | null>(null);
   const [quiz, setQuiz] = useState(initialQuizState);
+  const [preReviewEnabled, setPreReviewEnabledState] = useState(false);
+  const [preReview, setPreReview] = useState({ qIndex: 0 });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const showLesson = useCallback((currentLesson: Lesson, savedProgress: DailyProgress | null) => {
+  const showLesson = useCallback((currentLesson: Lesson, savedProgress: DailyProgress | null, preReviewOn: boolean) => {
     setLessonState(currentLesson);
     setProgressState(savedProgress);
     setQuiz(initialQuizState);
-    setPhase(savedProgress?.done ? "done" : "lesson");
+    setPreReview({ qIndex: 0 });
+    // Lessons saved before pre-review existed have no questions to ask, so they open straight on the lesson.
+    const guessFirst = preReviewOn && !!currentLesson.preQuiz?.length;
+    setPhase(savedProgress?.done ? "done" : guessFirst ? "prereview" : "lesson");
   }, []);
 
   const load = useCallback(async () => {
@@ -54,7 +61,7 @@ export function useDailyLesson(user: User | null) {
     setDate(today);
 
     try {
-      const [existingLesson, streakData, weightsData, history, progressData, categoriesData, accessRequest] = await Promise.all([
+      const [existingLesson, streakData, weightsData, history, progressData, categoriesData, accessRequest, preReviewOn] = await Promise.all([
         getLesson(user.uid, today),
         getStreak(user.uid),
         getWeights(user.uid),
@@ -62,7 +69,9 @@ export function useDailyLesson(user: User | null) {
         getProgress(user.uid, today),
         getSelectedCategories(user.uid),
         getAccessRequest(user.uid),
+        getPreReviewEnabled(user.uid),
       ]);
+      setPreReviewEnabledState(preReviewOn);
       setStreakState(streakData);
       setWeightsState(weightsData);
       setSelectedCategoriesState(categoriesData ?? CATEGORY_KEYS);
@@ -81,7 +90,7 @@ export function useDailyLesson(user: User | null) {
         currentLesson = await createDailyLesson(user, today, weightsData, history, categoriesData ?? CATEGORY_KEYS);
       }
 
-      showLesson(currentLesson, progressData);
+      showLesson(currentLesson, progressData, preReviewOn);
     } catch (err) {
       console.error("useDailyLesson load failed:", err);
       setErrorMessage(errorMessageFor(err, "Something went wrong."));
@@ -100,7 +109,7 @@ export function useDailyLesson(user: User | null) {
   }, [load]);
 
   useEffect(() => {
-    syncAppBadge(phase === "lesson" || phase === "quiz");
+    syncAppBadge(phase === "prereview" || phase === "lesson" || phase === "quiz");
   }, [phase]);
 
   useEffect(() => {
@@ -120,6 +129,23 @@ export function useDailyLesson(user: User | null) {
       document.removeEventListener("visibilitychange", refreshDate);
     };
   }, [date, phase, load]);
+
+  function answerPreReview() {
+    if (!lesson?.preQuiz) return;
+    if (preReview.qIndex + 1 < lesson.preQuiz.length) setPreReview({ qIndex: preReview.qIndex + 1 });
+    else setPhase("lesson");
+  }
+
+  function skipPreReview() {
+    setPhase("lesson");
+  }
+
+  /** Throws when saving fails (and keeps the old setting) so the menu can show the error. */
+  async function setPreReviewSetting(enabled: boolean) {
+    if (!user) throw new Error("Sign in to change this setting.");
+    await setPreReviewEnabled(user.uid, enabled);
+    setPreReviewEnabledState(enabled);
+  }
 
   function startQuiz() {
     setQuiz(initialQuizState);
@@ -205,9 +231,11 @@ export function useDailyLesson(user: User | null) {
     selectedCategories,
     progress,
     quiz,
+    preReview,
+    preReviewEnabled,
     errorMessage,
     categoryKeys: CATEGORY_KEYS,
-    actions: { retry: load, startQuiz, selectOption, nextQuestion, adjustWeight, resetAll, saveCategories },
+    actions: { retry: load, answerPreReview, skipPreReview, setPreReview: setPreReviewSetting, startQuiz, selectOption, nextQuestion, adjustWeight, resetAll, saveCategories },
   };
 }
 

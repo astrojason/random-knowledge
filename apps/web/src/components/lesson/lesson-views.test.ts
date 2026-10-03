@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DailyLesson } from "./DailyLesson";
 import { CategoryPicker } from "./CategoryPicker";
 import { QuizView } from "./QuizView";
+import { PreReviewView } from "./PreReviewView";
 import { QuizReview } from "./QuizReview";
 import { DeepLinks } from "./DeepLinks";
 import { useDailyLesson } from "@/lib/useDailyLesson";
@@ -14,6 +15,7 @@ vi.mock("@/lib/firestore", () => ({ createShare: vi.fn() }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null, claims: null, signOut: vi.fn() }) }));
 
 const lesson: Lesson = {
+  preQuiz: [{ question: "Which would you guess?", options: ["Red", "Green", "Blue"], correctIndex: 1, explanation: "Green." }],
   category: "nature", title: "A test lesson", body: ["First paragraph", "Second paragraph", "Third paragraph"],
   wikiQuery: "nature & science", youtubeQuery: "nature video",
   quiz: [{ question: "Which answer?", options: ["Alpha", "Beta", "Gamma", "Delta"], correctIndex: 0, explanation: "Alpha is correct." }],
@@ -25,8 +27,8 @@ function state(phase: ReturnType<typeof useDailyLesson>["phase"]): ReturnType<ty
     phase, date: "2026-09-10", lesson, streak: { streak: 1, longest: 1, lastDate: null },
     weights: {} as ReturnType<typeof useDailyLesson>["weights"], selectedCategories: ["nature"],
     progress: { done: true, correct: 1, total: 1, answers: [0] },
-    quiz: { qIndex: 0, correct: 0, selected: null, answers: [] }, errorMessage: "Test error", categoryKeys: ["nature"],
-    actions: { retry: vi.fn(), startQuiz: noop, selectOption: noop, nextQuestion: vi.fn(), adjustWeight: vi.fn(), resetAll: vi.fn(), saveCategories: vi.fn() },
+    quiz: { qIndex: 0, correct: 0, selected: null, answers: [] }, preReview: { qIndex: 0 }, preReviewEnabled: false, errorMessage: "Test error", categoryKeys: ["nature"],
+    actions: { retry: vi.fn(), startQuiz: noop, answerPreReview: noop, skipPreReview: noop, setPreReview: vi.fn(), selectOption: noop, nextQuestion: vi.fn(), adjustWeight: vi.fn(), resetAll: vi.fn(), saveCategories: vi.fn() },
   };
 }
 
@@ -35,12 +37,20 @@ beforeEach(() => vi.clearAllMocks());
 describe("daily lesson phases", () => {
   it.each([
     ["loading", "Setting things up"], ["generating", "Researching and checking"], ["categories", "What would you like to learn?"],
-    ["error", "Test error"], ["lesson", "A test lesson"], ["quiz", "Which answer?"], ["done", "1 of 1 today"],
+    ["error", "Test error"], ["prereview", "Which would you guess?"], ["lesson", "A test lesson"], ["quiz", "Which answer?"], ["done", "1 of 1 today"],
   ] as const)("renders %s", (phase, text) => {
     vi.mocked(useDailyLesson).mockReturnValue(state(phase));
     const html = renderToStaticMarkup(createElement(DailyLesson));
     expect(html).toContain(text);
-    expect(html.includes("My categories")).toBe(["lesson", "quiz", "done"].includes(phase));
+    expect(html.includes("My categories")).toBe(["prereview", "lesson", "quiz", "done"].includes(phase));
+  });
+
+  it("explains why guessing first helps and shows no answer feedback during pre-review", () => {
+    vi.mocked(useDailyLesson).mockReturnValue(state("prereview"));
+    const html = renderToStaticMarkup(createElement(DailyLesson));
+    expect(html).toContain("Even a wrong guess gets you thinking before you find the answer");
+    expect(html).not.toContain("Green.");
+    expect(html).not.toContain("bg-correct");
   });
 
   it("does not show completed results without saved progress", () => {
@@ -62,6 +72,16 @@ describe("daily lesson phases", () => {
     const html = renderToStaticMarkup(createElement(DailyLesson));
     expect(html).not.toContain("days streak");
     expect(html).not.toContain("day streak");
+  });
+});
+
+describe("pre-review answers", () => {
+  it("advances without revealing whether the guess was right", () => {
+    const onAnswer = vi.fn();
+    const html = renderToStaticMarkup(createElement(PreReviewView, { lesson, preReview: { qIndex: 0 }, onAnswer, onSkip: noop }));
+    expect(html).toContain("Question 1 of 1");
+    expect(html).toContain("Skip");
+    expect(html).not.toContain("bg-correct");
   });
 });
 

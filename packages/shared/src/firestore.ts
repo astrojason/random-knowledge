@@ -1,5 +1,5 @@
 import type { Firestore } from "firebase/firestore";
-import { collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, runTransaction, setDoc, updateDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, runTransaction, setDoc, startAfter, updateDoc } from "firebase/firestore";
 import { CATEGORY_KEYS, defaultWeights, type CategoryKey, type Weights } from "./categories";
 import type { AccessRequest } from "./auth-guard";
 import { todayStr } from "./date";
@@ -34,6 +34,16 @@ export function createFirestoreApi(db: Firestore) {
   async function setPushToken(uid: string, token: string, platform: PushToken["platform"]): Promise<void> {
     const data: PushToken = { token, platform, updatedAt: new Date().toISOString() };
     await setDoc(doc(db, "users", uid, "meta", "pushToken"), data);
+  }
+
+  /** Whether the reader wants a short guess-first quiz before each lesson. Off until they turn it on. */
+  async function getPreReviewEnabled(uid: string): Promise<boolean> {
+    const snap = await getDoc(doc(db, "users", uid, "meta", "settings"));
+    return snap.exists() && snap.data().preReview === true;
+  }
+
+  async function setPreReviewEnabled(uid: string, enabled: boolean): Promise<void> {
+    await setDoc(doc(db, "users", uid, "meta", "settings"), { preReview: enabled }, { merge: true });
   }
 
   async function getSelectedCategories(uid: string): Promise<CategoryKey[] | null> {
@@ -159,16 +169,21 @@ export function createFirestoreApi(db: Firestore) {
     });
   }
 
-  /** Superadmin-only (enforced by firestore.rules). Most recent generations first. */
-  async function listGenerationLog(max = 50): Promise<GenerationLogEntry[]> {
-    const snap = await getDocs(query(collection(db, "generationLog"), orderBy("createdAt", "desc"), limit(max)));
-    return snap.docs.map((d) => d.data() as GenerationLogEntry);
+  /** Newest first; `after` is the `createdAt` of the last entry of the previous page. */
+  async function listNewestFirst<T>(name: string, max: number, after: string | null): Promise<T[]> {
+    const cursor = after ? [startAfter(after)] : [];
+    const snap = await getDocs(query(collection(db, name), orderBy("createdAt", "desc"), ...cursor, limit(max)));
+    return snap.docs.map((d) => d.data() as T);
   }
 
-  /** Superadmin-only (enforced by firestore.rules). Most recent cron runs first. */
-  async function listCronRunLog(max = 50): Promise<CronRunLogEntry[]> {
-    const snap = await getDocs(query(collection(db, "cronRunLog"), orderBy("createdAt", "desc"), limit(max)));
-    return snap.docs.map((d) => d.data() as CronRunLogEntry);
+  /** Superadmin-only (enforced by firestore.rules). Most recent generations first, one page at a time. */
+  async function listGenerationLog(max = 50, after: string | null = null): Promise<GenerationLogEntry[]> {
+    return listNewestFirst<GenerationLogEntry>("generationLog", max, after);
+  }
+
+  /** Superadmin-only (enforced by firestore.rules). Most recent cron runs first, one page at a time. */
+  async function listCronRunLog(max = 50, after: string | null = null): Promise<CronRunLogEntry[]> {
+    return listNewestFirst<CronRunLogEntry>("cronRunLog", max, after);
   }
 
   /** Snapshots a lesson to shares/{id} (once per lesson date) and returns the id used in its share link. */
@@ -268,6 +283,7 @@ export function createFirestoreApi(db: Firestore) {
     await Promise.all(pointers.docs.map((d) => deleteDoc(doc(db, "shares", d.data().shareId as string))));
     await resetAllUserData(uid);
     await deleteDoc(doc(db, "users", uid, "meta", "pushToken"));
+    await deleteDoc(doc(db, "users", uid, "meta", "settings"));
     await deleteDoc(doc(db, "accessRequests", uid));
   }
 
@@ -276,6 +292,8 @@ export function createFirestoreApi(db: Firestore) {
     getWeights,
     setWeights,
     setPushToken,
+    getPreReviewEnabled,
+    setPreReviewEnabled,
     getSelectedCategories,
     setSelectedCategories,
     getHistory,

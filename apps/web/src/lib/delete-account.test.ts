@@ -41,6 +41,7 @@ describe("deleting an account's data", () => {
     expect(deletedPaths()).toEqual(
       expect.arrayContaining([
         "users/user-a/meta/pushToken",
+        "users/user-a/meta/settings",
         "users/user-a/meta/streak",
         "users/user-a/meta/weights",
         "users/user-a/meta/history",

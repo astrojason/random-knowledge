@@ -68,3 +68,31 @@ it("closes on Escape", async () => {
   });
   expect(openButton().getAttribute("aria-expanded")).toBe("false");
 });
+
+it("shows the pre-review switch with the Settings and toggles it", async () => {
+  const onTogglePreReview = vi.fn();
+  await act(async () => {
+    root.render(createElement(HeaderMenu, {
+      showCategoriesSetting: true, categoryCount: 3, onEditCategories: vi.fn(), preReviewEnabled: false, onTogglePreReview,
+    }));
+  });
+  await act(async () => openButton().click());
+  const toggle = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+  expect(container.textContent).toContain("Pre-review");
+  expect(toggle.checked).toBe(false);
+  await act(async () => toggle.click());
+  expect(onTogglePreReview).toHaveBeenCalledWith(true);
+});
+
+it("reports a failure to save the pre-review switch", async () => {
+  await act(async () => {
+    root.render(createElement(HeaderMenu, {
+      showCategoriesSetting: true, categoryCount: 3, onEditCategories: vi.fn(), preReviewEnabled: false,
+      onTogglePreReview: vi.fn().mockRejectedValue(new Error("offline")),
+    }));
+  });
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  await act(async () => openButton().click());
+  await act(async () => (container.querySelector('input[type="checkbox"]') as HTMLInputElement).click());
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain("offline");
+});

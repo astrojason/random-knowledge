@@ -10,6 +10,8 @@ export function Header({
   showCategoriesSetting,
   categoryCount,
   onEditCategories,
+  preReviewEnabled,
+  onTogglePreReview,
   onSignOut,
 }: {
   date: string;
@@ -19,6 +21,8 @@ export function Header({
   showCategoriesSetting: boolean;
   categoryCount: number;
   onEditCategories: () => void;
+  preReviewEnabled: boolean;
+  onTogglePreReview: (enabled: boolean) => Promise<void>;
   onSignOut: () => void;
 }) {
   return (
@@ -30,6 +34,8 @@ export function Header({
             showCategoriesSetting={showCategoriesSetting}
             categoryCount={categoryCount}
             onEditCategories={onEditCategories}
+            preReviewEnabled={preReviewEnabled}
+            onTogglePreReview={onTogglePreReview}
           />
           <div className="flex items-center gap-1.5">
             <span className="text-[13px] text-fg-muted">{formatDateLabel(date)}</span>

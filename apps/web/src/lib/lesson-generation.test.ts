@@ -18,6 +18,7 @@ function fixture() {
     wikiQuery: "topic research evidence", youtubeQuery: "topic explanation demonstration",
     paragraphSources: [[1], [2], [1, 2]],
     quiz: Array.from({ length: 3 }, () => ({ question: "What happened?", options: ["A", "B", "C", "D"], correctIndex: 0, explanation: "The lesson explains A." })),
+    preQuiz: Array.from({ length: 2 }, () => ({ question: "Which do you expect?", options: ["A", "B", "C"], correctIndex: 0, explanation: "The lesson explains A." })),
   };
   const response = (value: unknown) => ({ choices: [{ finish_reason: "stop", message: { content: JSON.stringify(value) } }], usage: { total_tokens: 50 } });
   const search = vi.fn().mockResolvedValue(research);
@@ -36,6 +37,23 @@ describe("source-backed lesson generation", () => {
     expect(f.chat).toHaveBeenCalledTimes(2);
     expect(lesson.sources?.map((s) => s.url)).toEqual(["https://museum.example/topic", "https://university.example/topic"]);
     expect(f.onTokens.mock.calls.map(([count]) => count)).toEqual([100, 50, 50]);
+  });
+
+  it("keeps the simpler pre-review questions the writer produced", async () => {
+    const f = fixture();
+    const lesson = await f.generate();
+    expect(lesson.preQuiz).toEqual(f.draft.preQuiz);
+  });
+
+  it("drops malformed pre-review questions with a warning rather than failing the whole lesson", async () => {
+    const f = fixture();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    f.draft.preQuiz[0].options = ["A", "B"];
+    const lesson = await f.generate();
+    expect(lesson.preQuiz).toBeUndefined();
+    expect(lesson.quiz).toHaveLength(3);
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/pre-review/i), expect.anything());
+    warn.mockRestore();
   });
 
   it("rejects unsourced research without falling back to model memory", async () => {

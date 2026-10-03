@@ -6,7 +6,7 @@ export function AdminLink() {
       href="/admin"
       className="text-sm font-medium text-fg hover:text-accent"
     >
-      Manage access
+      Admin
     </Link>
   );
 }

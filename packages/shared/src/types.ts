@@ -13,6 +13,8 @@ export interface GeneratedLesson {
   wikiQuery: string;
   youtubeQuery: string;
   quiz: QuizQuestion[];
+  /** Simpler guess-first questions (3 options each) shown before the lesson when the reader turns pre-review on. Absent on older lessons. */
+  preQuiz?: QuizQuestion[];
   /** Absent on lessons saved before source-backed generation. */
   sources?: LessonSource[];
   /** One-based source references for each body paragraph. */
