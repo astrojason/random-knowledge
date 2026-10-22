@@ -1,3 +1,4 @@
+import { MathText } from "@/components/lesson/MathText";
 import { ReadAloudButton } from "@/components/lesson/ReadAloudButton";
 import type { Lesson } from "@/lib/types";
 
@@ -11,7 +12,7 @@ export function LessonBody({ lesson }: { lesson: Lesson }) {
       <div className="mb-1 max-w-[62ch] font-heading text-[16.5px] leading-relaxed text-fg">
         {lesson.body.map((paragraph, i) => (
           <p key={i} className="mb-3.5">
-            {paragraph}
+            <MathText text={paragraph} />
             {lesson.paragraphSources?.[i]?.map((id) => {
               const source = lesson.sources?.[id - 1];
               return source ? (

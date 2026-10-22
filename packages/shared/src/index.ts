@@ -1,6 +1,7 @@
 export * from "./types";
 export * from "./categories";
 export * from "./quiz";
+export * from "./math";
 export * from "./streak";
 export * from "./date";
 export * from "./auth-guard";

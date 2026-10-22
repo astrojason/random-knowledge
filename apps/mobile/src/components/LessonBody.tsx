@@ -1,4 +1,5 @@
 import { Linking, StyleSheet, Text, View } from "react-native";
+import { plainMath } from "@random-knowledge/shared/math";
 import type { Lesson } from "@random-knowledge/shared/types";
 import { useTheme } from "../lib/theme";
 
@@ -10,7 +11,7 @@ export function LessonBody({ lesson }: { lesson: Lesson }) {
       <View style={styles.body}>
         {lesson.body.map((paragraph, i) => (
           <Text key={i} style={[styles.paragraph, { color: theme.fg }]}>
-            {paragraph}
+            {plainMath(paragraph)}
             {lesson.paragraphSources?.[i]?.map((id) => {
               const source = lesson.sources?.[id - 1];
               if (!source) return null;

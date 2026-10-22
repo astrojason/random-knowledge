@@ -22,6 +22,11 @@ describe("buildLessonSpeechText", () => {
     expect(secondParagraphIndex).toBeGreaterThan(firstParagraphIndex);
   });
 
+  it("reads LaTeX math as plain text, not raw markup", () => {
+    const withMath: Lesson = { ...lesson, body: [String.raw`The odds are \(\frac{1}{2}\approx 0.5\).`] };
+    expect(buildLessonSpeechText(withMath)).toContain("The odds are 1/2 ≈ 0.5.");
+  });
+
   it("omits citation source lists from the spoken text", () => {
     const withSources: Lesson = { ...lesson, sources: [{ title: "Source A", url: "https://example.com" }], paragraphSources: [[1]] };
     expect(buildLessonSpeechText(withSources)).not.toContain("Source A");

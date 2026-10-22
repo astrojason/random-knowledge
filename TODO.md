@@ -2,6 +2,8 @@
 
 ## Follow-up
 
+- [ ] Lessons are now stored with LaTeX and rendered with KaTeX on web (plain-text fallback on mobile, plain text for read-aloud): check a fresh lesson with math on web; regenerate audio for already-stored lessons that contain `\(` since their saved narration read the raw markup; mobile could render real math later (needs a native-capable renderer and a new `eas build`)
+
 - [ ] Try the per-user "Auto lessons" switch (Manage access screen) with a real account on web and mobile; mobile needs the new `eas build`
 - [ ] Put the Cloud Scheduler jobs in the repo (they exist only in gcloud, project `random-knowledge-ea232`, `us-central1`): `generate-daily-lesson` (00:00 America/Los_Angeles) and `generate-daily-lesson-retry` (03:00), both POST `/api/cron/generate-daily-lesson` with the `CRON_SECRET` bearer header; a small script that recreates them would do. After some nights, check the App Hosting logs for the "fewer than two publishers after a follow-up" warning to see whether topics or the source rule cause the remaining failed lessons
 - [ ] Decide whether `apps/web/src/app/api/generate-lesson/route.ts` (the on-demand route) should also fail closed when the token tracker is unreachable; it still treats an outage as zero usage (`getTokensUsedToday().catch(() => 0)`), unlike the cron route which now quits with a 503

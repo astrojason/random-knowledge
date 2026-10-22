@@ -39,6 +39,13 @@ describe("source-backed lesson generation", () => {
     expect(f.onTokens.mock.calls.map(([count]) => count)).toEqual([100, 50, 50]);
   });
 
+  it("keeps LaTeX math in the body for the app to render", async () => {
+    const f = fixture();
+    f.draft.body[0] = String.raw`Odds are \(\frac{364}{365}\approx 0.997\).`;
+    const lesson = await f.generate();
+    expect(lesson.body[0]).toBe(String.raw`Odds are \(\frac{364}{365}\approx 0.997\).`);
+  });
+
   it("keeps the simpler pre-review questions the writer produced", async () => {
     const f = fixture();
     const lesson = await f.generate();
