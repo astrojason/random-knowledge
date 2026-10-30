@@ -65,5 +65,5 @@ export function DoneView({
 const styles = StyleSheet.create({
   summary: { alignItems: "center", paddingVertical: 20 },
   score: { fontSize: 20, fontWeight: "600", marginBottom: 6 },
-  row: { flexDirection: "row", gap: 10 },
+  row: { alignSelf: "stretch", gap: 10 },
 });

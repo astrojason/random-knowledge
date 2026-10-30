@@ -61,6 +61,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 14,
     fontWeight: "600",
+    textAlign: "center",
   },
   card: {
     borderRadius: 10,
