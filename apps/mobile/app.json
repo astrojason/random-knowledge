@@ -45,7 +45,9 @@
           "backgroundColor": "#141b22",
           "imageWidth": 160
         }
-      ]
+      ],
+      "expo-status-bar",
+      "expo-font"
     ],
     "extra": {
       "eas": {
