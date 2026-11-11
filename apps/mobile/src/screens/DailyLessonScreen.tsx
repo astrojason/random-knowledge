@@ -78,14 +78,16 @@ export function DailyLessonScreen() {
           </View>
           {lesson?.category && (
             <View style={[styles.badge, { backgroundColor: theme.accentSoft }]}>
-              <Text style={{ color: theme.accent, fontSize: 12, fontWeight: "600" }}>{CATEGORIES[lesson.category]}</Text>
+              <Text style={{ color: theme.accent, fontSize: 12, fontWeight: "600" }}>Today’s lesson: {CATEGORIES[lesson.category]}</Text>
             </View>
           )}
         </View>
 
         {showCategoriesSetting && categoriesSaved && (
           <View style={styles.categoryToggle}>
-            <Text style={{ color: theme.fgMuted, fontSize: 11 }}>Categories saved for future lessons.</Text>
+            <Text style={{ color: theme.fgMuted, fontSize: 13 }}>
+              Saved! Future lessons will come from: {selectedCategories.map((key) => CATEGORIES[key]).join(", ")}. Today’s lesson stays the same.
+            </Text>
           </View>
         )}
 
